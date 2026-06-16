@@ -29,8 +29,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Rota pública com sessão → dashboard
-  if (isPublic && hasSession) {
+  // Rota pública com sessão → dashboard (exceto /planos — sempre acessível)
+  if (isPublic && hasSession && pathname !== '/planos') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

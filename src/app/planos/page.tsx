@@ -3,11 +3,15 @@
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { Check, X, Zap, Star, Crown, Rocket, MessageCircle, ArrowLeft, ChevronDown } from 'lucide-react';
+import {
+  Check, Zap, Star, Crown, Rocket,
+  MessageCircle, ArrowLeft, ChevronDown,
+  Users, FileText, Car, Package, DollarSign, BarChart2,
+} from 'lucide-react';
 import { useState } from 'react';
 
-// ─── WhatsApp CTA ─────────────────────────────────────────────────────────
-const WHATSAPP_NUMBER = '5531971464759'; // (31) 97146-4759 — altere aqui
+// ─── Config ───────────────────────────────────────────────────────────────
+const WHATSAPP_NUMBER = '5531971464759'; // (31) 97146-4759
 
 function whatsappLink(plano: string) {
   const msg = encodeURIComponent(
@@ -16,63 +20,59 @@ function whatsappLink(plano: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
 }
 
-// ─── Dados dos planos ──────────────────────────────────────────────────────
+// ─── Planos ────────────────────────────────────────────────────────────────
 const PLANS = [
   {
     id: 'trial',
     nome: 'Trial',
-    descricao: 'Experimente grátis por 14 dias',
+    descricao: 'Experimente sem compromisso',
     preco: null,
     precoLabel: 'Grátis',
     periodo: '14 dias',
-    cor: 'from-slate-400 to-slate-500',
-    corBorda: 'border-slate-300 dark:border-slate-600',
-    corBg: 'bg-slate-50 dark:bg-slate-800/30',
     icone: Rocket,
+    cor: 'from-slate-400 to-slate-600',
+    corBorda: 'border-slate-300 dark:border-slate-600',
+    corCard: '',
     destaque: false,
     cta: 'Começar grátis',
     ctaHref: '/cadastro',
     ctaExterno: false,
-    features: [
-      { texto: '1 usuário', ativo: true },
-      { texto: 'Até 10 clientes', ativo: true },
-      { texto: 'Até 30 ordens de serviço', ativo: true },
-      { texto: 'Até 50 itens no estoque', ativo: true },
-      { texto: 'Orçamentos', ativo: true },
-      { texto: 'WhatsApp mensagens', ativo: true },
-      { texto: 'Financeiro', ativo: false },
-      { texto: 'Relatórios avançados', ativo: false },
-      { texto: 'Lembretes automáticos', ativo: false },
-      { texto: 'Suporte prioritário', ativo: false },
+    ctaStyle: 'outline',
+    limites: [
+      { icon: Users,     label: 'Usuários',              valor: '1' },
+      { icon: FileText,  label: 'Clientes',               valor: 'Até 10' },
+      { icon: Car,       label: 'Ordens de Serviço',      valor: 'Até 30/mês' },
+      { icon: Package,   label: 'Itens no Estoque',       valor: 'Até 50' },
+      { icon: DollarSign,label: 'Lançamentos Financeiro', valor: 'Até 50' },
+      { icon: BarChart2, label: 'Relatórios',             valor: 'Até 10' },
     ],
+    extras: ['Orçamentos', 'WhatsApp mensagens', 'Agenda', 'Cat. Serviços'],
   },
   {
     id: 'starter',
     nome: 'Starter',
-    descricao: 'Para quem está começando',
+    descricao: 'Para oficinas que estão crescendo',
     preco: 49,
     precoLabel: 'R$ 49',
     periodo: '/mês',
-    cor: 'from-blue-400 to-blue-600',
-    corBorda: 'border-blue-200 dark:border-blue-800',
-    corBg: 'bg-blue-50/50 dark:bg-blue-900/10',
     icone: Zap,
+    cor: 'from-blue-400 to-blue-600',
+    corBorda: 'border-blue-300 dark:border-blue-700',
+    corCard: '',
     destaque: false,
     cta: 'Assinar Starter',
     ctaHref: whatsappLink('Starter'),
     ctaExterno: true,
-    features: [
-      { texto: '1 usuário', ativo: true },
-      { texto: 'Até 10 clientes', ativo: true },
-      { texto: 'Até 50 ordens de serviço', ativo: true },
-      { texto: 'Até 100 itens no estoque', ativo: true },
-      { texto: 'Orçamentos', ativo: true },
-      { texto: 'WhatsApp mensagens', ativo: true },
-      { texto: 'Financeiro', ativo: false },
-      { texto: 'Relatórios avançados', ativo: false },
-      { texto: 'Lembretes automáticos', ativo: false },
-      { texto: 'Suporte prioritário', ativo: false },
+    ctaStyle: 'outline',
+    limites: [
+      { icon: Users,     label: 'Usuários',              valor: '1' },
+      { icon: FileText,  label: 'Clientes',               valor: 'Até 10' },
+      { icon: Car,       label: 'Ordens de Serviço',      valor: 'Até 50/mês' },
+      { icon: Package,   label: 'Itens no Estoque',       valor: 'Até 100' },
+      { icon: DollarSign,label: 'Lançamentos Financeiro', valor: 'Até 300/mês' },
+      { icon: BarChart2, label: 'Relatórios',             valor: 'Até 100/mês' },
     ],
+    extras: ['Orçamentos', 'WhatsApp mensagens', 'Agenda', 'Cat. Serviços'],
   },
   {
     id: 'profissional',
@@ -81,97 +81,78 @@ const PLANS = [
     preco: 89,
     precoLabel: 'R$ 89',
     periodo: '/mês',
+    icone: Star,
     cor: 'from-orange-400 to-orange-600',
     corBorda: 'border-orange-400',
-    corBg: 'bg-orange-500/5',
-    icone: Star,
+    corCard: 'ring-2 ring-orange-400/30',
     destaque: true,
     cta: 'Assinar Profissional',
     ctaHref: whatsappLink('Profissional'),
     ctaExterno: true,
-    features: [
-      { texto: '1 usuário', ativo: true },
-      { texto: 'Até 60 clientes', ativo: true },
-      { texto: 'Até 300 ordens de serviço', ativo: true },
-      { texto: 'Até 500 itens no estoque', ativo: true },
-      { texto: 'Orçamentos', ativo: true },
-      { texto: 'WhatsApp mensagens', ativo: true },
-      { texto: 'Financeiro completo', ativo: true },
-      { texto: 'Relatórios avançados', ativo: false },
-      { texto: 'Lembretes automáticos', ativo: false },
-      { texto: 'Suporte prioritário', ativo: false },
+    ctaStyle: 'filled',
+    limites: [
+      { icon: Users,     label: 'Usuários',              valor: '1' },
+      { icon: FileText,  label: 'Clientes',               valor: 'Até 60' },
+      { icon: Car,       label: 'Ordens de Serviço',      valor: 'Até 300/mês' },
+      { icon: Package,   label: 'Itens no Estoque',       valor: 'Até 500' },
+      { icon: DollarSign,label: 'Lançamentos Financeiro', valor: 'Até 2.000/mês' },
+      { icon: BarChart2, label: 'Relatórios',             valor: 'Até 500/mês' },
     ],
+    extras: ['Orçamentos', 'WhatsApp mensagens', 'Agenda', 'Cat. Serviços'],
   },
   {
     id: 'premium',
     nome: 'Premium',
-    descricao: 'Para oficinas que querem crescer',
+    descricao: 'Sem limites, com suporte VIP',
     preco: 149,
     precoLabel: 'R$ 149',
     periodo: '/mês',
-    cor: 'from-purple-500 to-purple-700',
-    corBorda: 'border-purple-300 dark:border-purple-700',
-    corBg: 'bg-purple-50/50 dark:bg-purple-900/10',
     icone: Crown,
+    cor: 'from-purple-500 to-purple-700',
+    corBorda: 'border-purple-400 dark:border-purple-600',
+    corCard: 'ring-2 ring-purple-400/20',
     destaque: false,
     cta: 'Assinar Premium',
     ctaHref: whatsappLink('Premium'),
     ctaExterno: true,
-    features: [
-      { texto: 'Usuários ilimitados', ativo: true },
-      { texto: 'Clientes ilimitados', ativo: true },
-      { texto: 'Ordens ilimitadas', ativo: true },
-      { texto: 'Estoque ilimitado', ativo: true },
-      { texto: 'Orçamentos', ativo: true },
-      { texto: 'WhatsApp mensagens', ativo: true },
-      { texto: 'Financeiro completo', ativo: true },
-      { texto: 'Relatórios avançados', ativo: true },
-      { texto: 'Lembretes automáticos', ativo: true },
-      { texto: 'Suporte prioritário', ativo: true },
+    ctaStyle: 'purple',
+    limites: [
+      { icon: Users,     label: 'Usuários',              valor: 'Ilimitados' },
+      { icon: FileText,  label: 'Clientes',               valor: 'Ilimitados' },
+      { icon: Car,       label: 'Ordens de Serviço',      valor: 'Ilimitadas' },
+      { icon: Package,   label: 'Itens no Estoque',       valor: 'Ilimitados' },
+      { icon: DollarSign,label: 'Lançamentos Financeiro', valor: 'Ilimitados' },
+      { icon: BarChart2, label: 'Relatórios',             valor: 'Ilimitados' },
     ],
+    extras: ['Orçamentos', 'WhatsApp mensagens', 'Agenda', 'Cat. Serviços', 'Lembretes automáticos', 'Suporte prioritário', 'Relatórios avançados'],
   },
 ];
 
 const FAQ = [
-  {
-    q: 'Posso cancelar a qualquer momento?',
-    r: 'Sim! Não há fidelidade. Cancele quando quiser, sem multa.',
-  },
-  {
-    q: 'O que acontece ao final do Trial?',
-    r: 'Seus dados ficam salvos. Você escolhe um plano para continuar. Nada é apagado.',
-  },
-  {
-    q: 'Como é feito o pagamento?',
-    r: 'Aceitamos PIX, cartão de crédito e boleto. Fale conosco pelo WhatsApp para ativar.',
-  },
-  {
-    q: 'Posso mudar de plano depois?',
-    r: 'Sim, você pode fazer upgrade ou downgrade a qualquer momento. O valor é proporcional ao período.',
-  },
-  {
-    q: 'Os dados ficam seguros?',
-    r: 'Sim. Seus dados ficam armazenados com segurança na nuvem (Supabase). Backup automático diário.',
-  },
+  { q: 'Posso cancelar a qualquer momento?', r: 'Sim! Sem fidelidade nem multa. Cancele quando quiser.' },
+  { q: 'O que acontece ao final do Trial?', r: 'Seus dados ficam salvos. Escolha um plano para continuar. Nada é apagado.' },
+  { q: 'Como é feito o pagamento?', r: 'Aceitamos PIX, cartão de crédito e boleto. Fale conosco pelo WhatsApp para ativar.' },
+  { q: 'Posso mudar de plano depois?', r: 'Sim! Upgrade ou downgrade a qualquer momento. Valor proporcional ao período.' },
+  { q: 'Os dados ficam seguros?', r: 'Sim. Armazenados na nuvem com backup automático diário.' },
 ];
 
 function FaqItem({ q, r }: { q: string; r: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <button
-      onClick={() => setOpen(o => !o)}
-      className="w-full text-left border border-[rgb(var(--card-border))] rounded-2xl overflow-hidden transition-all"
-    >
-      <div className="flex items-center justify-between px-5 py-4 gap-3">
+    <div className="border border-[rgb(var(--card-border))] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-4 gap-3 text-left hover:bg-[rgb(var(--muted))]/40 transition-colors"
+      >
         <span className="text-sm font-semibold text-[rgb(var(--foreground))]">{q}</span>
-        <ChevronDown className={cn('w-4 h-4 text-[rgb(var(--muted-foreground))] flex-shrink-0 transition-transform', open && 'rotate-180')} />
-      </div>
+        <ChevronDown className={cn('w-4 h-4 text-[rgb(var(--muted-foreground))] flex-shrink-0 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
       {open && (
-        <div className="px-5 pb-4 text-sm text-[rgb(var(--muted-foreground))] border-t border-[rgb(var(--card-border))] pt-3">
+        <div className="px-5 pb-4 text-sm text-[rgb(var(--muted-foreground))] border-t border-[rgb(var(--card-border))] pt-3 bg-[rgb(var(--muted))]/20">
           {r}
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -197,14 +178,11 @@ export default function PlanosPage() {
           </div>
           <span className="font-bold text-sm text-[rgb(var(--foreground))]">Motor em Dia</span>
         </div>
-        {!empresa && (
-          <Link href="/login" className="text-sm text-orange-500 hover:underline font-medium">
-            Entrar
-          </Link>
-        )}
-        {empresa && (
+        {!empresa ? (
+          <Link href="/login" className="text-sm text-orange-500 hover:underline font-medium">Entrar</Link>
+        ) : (
           <span className="text-xs text-[rgb(var(--muted-foreground))]">
-            Plano atual: <strong className="text-[rgb(var(--foreground))] capitalize">{planoAtual}</strong>
+            Plano atual: <strong className="text-[rgb(var(--foreground))] capitalize">{planoAtual === 'trial' ? 'Trial' : planoAtual}</strong>
           </span>
         )}
       </div>
@@ -212,63 +190,60 @@ export default function PlanosPage() {
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Hero */}
         <div className="text-center mb-14">
-          <span className="inline-block bg-orange-500/10 text-orange-500 text-xs font-bold px-3 py-1.5 rounded-full mb-4 border border-orange-500/20">
-            Planos e Preços
+          <span className="inline-block bg-orange-500/10 text-orange-500 text-xs font-bold px-3 py-1.5 rounded-full mb-4 border border-orange-500/20 tracking-wide">
+            PLANOS E PREÇOS
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-[rgb(var(--foreground))] mb-4 leading-tight">
-            Escolha o plano ideal<br />
-            <span className="text-orange-500">para sua oficina</span>
+            Tudo incluso em todos os planos.<br />
+            <span className="text-orange-500">Só muda a quantidade.</span>
           </h1>
-          <p className="text-[rgb(var(--muted-foreground))] text-base max-w-xl mx-auto">
-            Comece grátis por 14 dias. Sem cartão de crédito. Cancele quando quiser.
+          <p className="text-[rgb(var(--muted-foreground))] text-base max-w-lg mx-auto">
+            Orçamentos, WhatsApp, Agenda, Estoque, Financeiro e muito mais — em todos os planos. Comece grátis por 14 dias.
           </p>
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-16 items-start">
           {PLANS.map(plan => {
             const Icon = plan.icone;
             const isAtual = planoAtual === plan.id;
-            const isDestaque = plan.destaque;
 
             return (
               <div
                 key={plan.id}
                 className={cn(
-                  'relative rounded-3xl border-2 p-6 flex flex-col transition-all duration-200',
+                  'relative rounded-3xl border-2 p-6 flex flex-col bg-[rgb(var(--card))] transition-all duration-200',
                   plan.corBorda,
-                  plan.corBg,
-                  isDestaque && 'shadow-2xl shadow-orange-500/20 scale-[1.02]',
-                  !isDestaque && 'hover:scale-[1.01] hover:shadow-xl'
+                  plan.corCard,
+                  plan.destaque && 'shadow-2xl shadow-orange-500/15',
+                  !plan.destaque && 'hover:shadow-xl'
                 )}
               >
-                {/* Badge destaque */}
-                {isDestaque && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                {/* Badges */}
+                {plan.destaque && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow whitespace-nowrap">
                       ⭐ Mais Popular
                     </span>
                   </div>
                 )}
-
-                {/* Badge plano atual */}
                 {isAtual && (
-                  <div className="absolute -top-3 right-4">
-                    <span className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                  <div className="absolute -top-3.5 right-4">
+                    <span className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow whitespace-nowrap">
                       ✓ Seu plano
                     </span>
                   </div>
                 )}
 
-                {/* Ícone + Nome */}
+                {/* Header */}
                 <div className={cn('w-10 h-10 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4', plan.cor)}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-lg font-bold text-[rgb(var(--foreground))] mb-1">{plan.nome}</h2>
-                <p className="text-xs text-[rgb(var(--muted-foreground))] mb-4 min-h-[2.5rem]">{plan.descricao}</p>
+                <h2 className="text-xl font-bold text-[rgb(var(--foreground))] mb-0.5">{plan.nome}</h2>
+                <p className="text-xs text-[rgb(var(--muted-foreground))] mb-5 leading-relaxed">{plan.descricao}</p>
 
                 {/* Preço */}
-                <div className="mb-6">
+                <div className="mb-6 pb-5 border-b border-[rgb(var(--card-border))]">
                   <div className="flex items-end gap-1">
                     <span className="text-3xl font-extrabold text-[rgb(var(--foreground))]">{plan.precoLabel}</span>
                     <span className="text-sm text-[rgb(var(--muted-foreground))] mb-1">{plan.periodo}</span>
@@ -278,25 +253,50 @@ export default function PlanosPage() {
                   )}
                 </div>
 
-                {/* Features */}
-                <ul className="flex-1 space-y-2.5 mb-6">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      {f.ativo ? (
-                        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      ) : (
-                        <X className="w-4 h-4 text-[rgb(var(--muted-foreground))] opacity-30 flex-shrink-0" />
-                      )}
-                      <span className={cn('text-xs', f.ativo ? 'text-[rgb(var(--foreground))]' : 'text-[rgb(var(--muted-foreground))] opacity-50 line-through')}>
-                        {f.texto}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {/* Limites de quantidade */}
+                <div className="mb-5 space-y-2.5">
+                  {plan.limites.map((l, i) => {
+                    const LIcon = l.icon;
+                    const isUnlimited = l.valor === 'Ilimitados' || l.valor === 'Ilimitadas';
+                    return (
+                      <div key={i} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <LIcon className="w-3.5 h-3.5 text-[rgb(var(--muted-foreground))] flex-shrink-0" />
+                          <span className="text-xs text-[rgb(var(--muted-foreground))]">{l.label}</span>
+                        </div>
+                        <span className={cn(
+                          'text-xs font-bold px-2 py-0.5 rounded-lg',
+                          isUnlimited
+                            ? 'bg-purple-500/10 text-purple-500'
+                            : plan.destaque
+                            ? 'bg-orange-500/10 text-orange-600'
+                            : 'bg-[rgb(var(--muted))] text-[rgb(var(--foreground))]'
+                        )}>
+                          {l.valor}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Extras inclusos */}
+                <div className="mb-6 flex-1">
+                  <p className="text-[10px] font-bold text-[rgb(var(--muted-foreground))] uppercase tracking-wider mb-2.5">
+                    Incluso
+                  </p>
+                  <div className="space-y-1.5">
+                    {plan.extras.map((e, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="text-xs text-[rgb(var(--foreground))]">{e}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 {/* CTA */}
                 {isAtual ? (
-                  <div className="w-full py-2.5 rounded-xl text-center text-sm font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                  <div className="w-full py-2.5 rounded-xl text-center text-sm font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
                     ✓ Plano atual
                   </div>
                 ) : plan.ctaExterno ? (
@@ -306,9 +306,9 @@ export default function PlanosPage() {
                     rel="noopener noreferrer"
                     className={cn(
                       'w-full py-2.5 rounded-xl text-center text-sm font-semibold transition-all flex items-center justify-center gap-2',
-                      isDestaque
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/30'
-                        : 'border-2 border-[rgb(var(--card-border))] hover:border-orange-500/50 text-[rgb(var(--foreground))] hover:text-orange-500'
+                      plan.ctaStyle === 'filled' && 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/25',
+                      plan.ctaStyle === 'purple' && 'bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/25',
+                      plan.ctaStyle === 'outline' && 'border-2 border-[rgb(var(--card-border))] hover:border-orange-500/60 text-[rgb(var(--foreground))] hover:text-orange-500'
                     )}
                   >
                     <MessageCircle className="w-4 h-4" />
@@ -317,7 +317,7 @@ export default function PlanosPage() {
                 ) : (
                   <Link
                     href={plan.ctaHref}
-                    className="w-full py-2.5 rounded-xl text-center text-sm font-semibold transition-all border-2 border-[rgb(var(--card-border))] hover:border-orange-500/50 text-[rgb(var(--foreground))] hover:text-orange-500 block"
+                    className="w-full py-2.5 rounded-xl text-center text-sm font-semibold transition-all border-2 border-[rgb(var(--card-border))] hover:border-orange-500/60 text-[rgb(var(--foreground))] hover:text-orange-500 block"
                   >
                     {plan.cta}
                   </Link>
@@ -325,52 +325,6 @@ export default function PlanosPage() {
               </div>
             );
           })}
-        </div>
-
-        {/* Tabela comparativa (mobile oculta) */}
-        <div className="hidden lg:block mb-16">
-          <h2 className="text-xl font-bold text-center text-[rgb(var(--foreground))] mb-6">Comparativo completo</h2>
-          <div className="rounded-3xl border border-[rgb(var(--card-border))] overflow-hidden bg-[rgb(var(--card))]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[rgb(var(--card-border))]">
-                  <th className="text-left px-6 py-4 font-semibold text-[rgb(var(--muted-foreground))]">Recurso</th>
-                  {PLANS.map(p => (
-                    <th key={p.id} className={cn('text-center px-4 py-4 font-bold', p.destaque ? 'text-orange-500' : 'text-[rgb(var(--foreground))]')}>
-                      {p.nome}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: 'Usuários', vals: ['1', '1', '1', 'Ilimitados'] },
-                  { label: 'Clientes', vals: ['Até 10', 'Até 10', 'Até 60', 'Ilimitados'] },
-                  { label: 'Ordens de serviço', vals: ['Até 30', 'Até 50', 'Até 300', 'Ilimitadas'] },
-                  { label: 'Itens no estoque', vals: ['Até 50', 'Até 100', 'Até 500', 'Ilimitados'] },
-                  { label: 'Orçamentos', vals: [true, true, true, true] },
-                  { label: 'WhatsApp mensagens', vals: [true, true, true, true] },
-                  { label: 'Financeiro', vals: [false, false, true, true] },
-                  { label: 'Relatórios avançados', vals: [false, false, false, true] },
-                  { label: 'Lembretes automáticos', vals: [false, false, false, true] },
-                  { label: 'Suporte prioritário', vals: [false, false, false, true] },
-                ].map((row, i) => (
-                  <tr key={i} className={cn('border-b border-[rgb(var(--card-border))] last:border-0', i % 2 === 0 ? '' : 'bg-[rgb(var(--muted))]/30')}>
-                    <td className="px-6 py-3.5 text-[rgb(var(--foreground))] font-medium">{row.label}</td>
-                    {row.vals.map((v, j) => (
-                      <td key={j} className="text-center px-4 py-3.5">
-                        {typeof v === 'boolean' ? (
-                          v ? <Check className="w-4 h-4 text-emerald-500 mx-auto" /> : <X className="w-4 h-4 text-[rgb(var(--muted-foreground))] opacity-30 mx-auto" />
-                        ) : (
-                          <span className="text-[rgb(var(--foreground))] font-medium">{v}</span>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
 
         {/* FAQ */}
