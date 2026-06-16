@@ -19,6 +19,7 @@ import {
   X,
   Wrench,
   FileSearch,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,7 @@ const navGroups = [
     color: 'slate' as const,
     items: [
       { href: '/financeiro', label: 'Financeiro',        icon: Lock, locked: true },
+      { href: '/planos',     label: 'Planos e Preços',   icon: CreditCard },
     ],
   },
 ];

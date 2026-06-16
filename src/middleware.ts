@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Rotas públicas que não precisam de login
-const PUBLIC_ROUTES = ['/login', '/cadastro', '/recuperar-senha', '/esqueci-senha'];
+const PUBLIC_ROUTES = ['/login', '/cadastro', '/recuperar-senha', '/esqueci-senha', '/planos'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
