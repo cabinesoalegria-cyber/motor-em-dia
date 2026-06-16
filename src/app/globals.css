@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-border: 226 232 240;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --primary: 249 115 22;
+    --primary-foreground: 255 255 255;
+    --sidebar-bg: 255 255 255;
+    --sidebar-border: 226 232 240;
+    --input-bg: 255 255 255;
+    --input-border: 203 213 225;
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --danger: 239 68 68;
+  }
+
+  .dark {
+    --background: 9 11 17;
+    --foreground: 248 250 252;
+    --card: 15 20 31;
+    --card-border: 30 41 59;
+    --muted: 15 23 42;
+    --muted-foreground: 100 116 139;
+    --primary: 249 115 22;
+    --primary-foreground: 255 255 255;
+    --sidebar-bg: 10 14 23;
+    --sidebar-border: 22 32 50;
+    --input-bg: 15 20 31;
+    --input-border: 30 41 59;
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --danger: 239 68 68;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* Transitions */
+.transition-base {
+  transition: all 0.2s ease;
+}
+
+/* Glass effect */
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Page animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Custom focus ring */
+*:focus-visible {
+  outline: 2px solid rgb(249 115 22);
+  outline-offset: 2px;
+}
+
+/* Number inputs */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+}
