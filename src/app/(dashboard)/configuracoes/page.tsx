@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/components/theme-provider';
-import { Sun, Moon, Building2, Save, Lock, Eye, EyeOff, Zap, ImagePlus, X, Loader2, Crown, Users, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { Sun, Moon, Building2, Save, Lock, Eye, EyeOff, Zap, ImagePlus, X, Loader2, Crown, Users, Plus, Trash2, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
@@ -81,6 +81,37 @@ export default function ConfiguracoesPage() {
     a.click();
     URL.revokeObjectURL(a.href);
     toast.success(`${nome}.csv exportado!`);
+  }
+
+  function exportXLS(nome: string, rows: Record<string, unknown>[]) {
+    if (!rows.length) { toast.error('Nenhum dado para exportar'); return; }
+    const keys = Object.keys(rows[0]);
+    function escXml(v: unknown): string {
+      return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    const header = `<Row>${keys.map(k => `<Cell><Data ss:Type="String">${escXml(k)}</Data></Cell>`).join('')}</Row>`;
+    const dataRows = rows.map(r =>
+      `<Row>${keys.map(k => {
+        const val = r[k];
+        const text = typeof val === 'object' ? JSON.stringify(val) : val;
+        const type = typeof val === 'number' ? 'Number' : 'String';
+        return `<Cell><Data ss:Type="${type}">${escXml(text)}</Data></Cell>`;
+      }).join('')}</Row>`
+    ).join('');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="${escXml(nome)}">
+    <Table>${header}${dataRows}</Table>
+  </Worksheet>
+</Workbook>`;
+    const blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${nome}-${new Date().toISOString().split('T')[0]}.xls`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success(`${nome}.xls exportado!`);
   }
 
   // Senha
@@ -381,23 +412,31 @@ export default function ConfiguracoesPage() {
         </div>
 
         {/* Exportações individuais */}
-        <p className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-widest mb-2">Exportar individual (CSV)</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <p className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-widest mb-3">Exportar individual</p>
+        <div className="space-y-2">
           {[
-            { label: 'Clientes',          data: clientes as unknown as Record<string, unknown>[] },
-            { label: 'Veículos',          data: veiculos as unknown as Record<string, unknown>[] },
-            { label: 'Ordens de Serviço', data: ordens  as unknown as Record<string, unknown>[] },
-            { label: 'Peças/Estoque',     data: pecas   as unknown as Record<string, unknown>[] },
-            { label: 'Financeiro',         data: lancamentos as unknown as Record<string, unknown>[] },
-            { label: 'Agendamentos',       data: agendamentos as unknown as Record<string, unknown>[] },
-          ].map(({ label, data }) => (
-            <button
-              key={label}
-              onClick={() => exportCSV(label.toLowerCase().replace(/\s/g, '_').replace(/\//g, '_'), data)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[rgb(var(--card-border))] text-xs font-medium text-[rgb(var(--muted-foreground))] hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
-            >
-              <Download className="w-3.5 h-3.5 flex-shrink-0" /> {label}
-            </button>
+            { label: 'Clientes',          nome: 'clientes',           data: clientes as unknown as Record<string, unknown>[] },
+            { label: 'Veículos',          nome: 'veiculos',           data: veiculos as unknown as Record<string, unknown>[] },
+            { label: 'Ordens de Serviço', nome: 'ordens_servico',     data: ordens   as unknown as Record<string, unknown>[] },
+            { label: 'Peças/Estoque',     nome: 'pecas_estoque',      data: pecas    as unknown as Record<string, unknown>[] },
+            { label: 'Financeiro',         nome: 'financeiro',         data: lancamentos  as unknown as Record<string, unknown>[] },
+            { label: 'Agendamentos',       nome: 'agendamentos',       data: agendamentos as unknown as Record<string, unknown>[] },
+          ].map(({ label, nome, data }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="flex-1 text-sm text-[rgb(var(--foreground))]">{label}</span>
+              <button
+                onClick={() => exportCSV(nome, data)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[rgb(var(--card-border))] text-xs font-semibold text-[rgb(var(--muted-foreground))] hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/5 transition-all"
+              >
+                <Download className="w-3.5 h-3.5" /> CSV
+              </button>
+              <button
+                onClick={() => exportXLS(nome, data)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[rgb(var(--card-border))] text-xs font-semibold text-[rgb(var(--muted-foreground))] hover:border-blue-400 hover:text-blue-500 hover:bg-blue-500/5 transition-all"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> XLS
+              </button>
+            </div>
           ))}
         </div>
       </div>

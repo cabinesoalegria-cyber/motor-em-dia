@@ -265,8 +265,8 @@ export default function PlanosPage() {
       </header>
 
       {/* ── HERO ────────────────────────────────────────────────────────── */}
-      <section className="w-full pt-20 pb-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="w-full pt-24 pb-24 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto text-center">
           {!isPago && daysLeft !== null && (
             <div className={cn(
               'inline-flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full mb-8 border',
@@ -314,9 +314,9 @@ export default function PlanosPage() {
 
       {/* ── USER STATS ──────────────────────────────────────────────────── */}
       {stats && (stats.hasData || stats.diasUso > 0) && (
-        <section className="w-full py-20 px-4 sm:px-6 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent border-y border-[rgb(var(--card-border))]">
+        <section className="w-full py-24 px-4 sm:px-6 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent border-y border-[rgb(var(--card-border))]">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12 mt-6">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[rgb(var(--foreground))] mb-3">
                 Veja o que você já construiu durante seu teste
               </h2>
@@ -349,9 +349,9 @@ export default function PlanosPage() {
       )}
 
       {/* ── BENEFITS ────────────────────────────────────────────────────── */}
-      <section className="w-full py-24 px-4 sm:px-6">
+      <section className="w-full py-28 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16 mt-4">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[rgb(var(--foreground))] mb-4">
               Continue organizando sua oficina
             </h2>
@@ -374,9 +374,9 @@ export default function PlanosPage() {
       </section>
 
       {/* ── PLANS ───────────────────────────────────────────────────────── */}
-      <section id="planos" className="w-full py-24 px-4 sm:px-6 bg-[rgb(var(--card))]/30 border-y border-[rgb(var(--card-border))]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+      <section id="planos" className="w-full py-28 px-4 sm:px-6 bg-[rgb(var(--card))]/30 border-y border-[rgb(var(--card-border))]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16 mt-6">
             <div className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 tracking-widest uppercase mb-6">
               🔥 Oferta por tempo limitado
             </div>
@@ -512,9 +512,9 @@ export default function PlanosPage() {
       </section>
 
       {/* ── SOCIAL PROOF ────────────────────────────────────────────────── */}
-      <section className="w-full py-20 px-4 sm:px-6 bg-gradient-to-r from-orange-500/5 via-orange-400/3 to-transparent border-y border-[rgb(var(--card-border))]">
+      <section className="w-full py-24 px-4 sm:px-6 bg-gradient-to-r from-orange-500/5 via-orange-400/3 to-transparent border-y border-[rgb(var(--card-border))]">
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center mt-4">
             {[
               { val: '500+',   label: 'Oficinas Ativas',               Icon: Award },
               { val: '50k+',   label: 'OS Gerenciadas',                Icon: ClipboardList },
@@ -534,9 +534,9 @@ export default function PlanosPage() {
       </section>
 
       {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
-      <section className="w-full py-24 px-4 sm:px-8">
+      <section className="w-full py-28 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16 mt-4">
             <div className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 tracking-widest uppercase mb-6">
               <Star className="w-3.5 h-3.5 fill-orange-500" /> Depoimentos reais
             </div>
@@ -553,9 +553,9 @@ export default function PlanosPage() {
       </section>
 
       {/* ── SAFETY ──────────────────────────────────────────────────────── */}
-      <section className="w-full py-24 px-4 sm:px-6 bg-[rgb(var(--card))]/40 border-y border-[rgb(var(--card-border))]">
+      <section className="w-full py-28 px-4 sm:px-6 bg-[rgb(var(--card))]/40 border-y border-[rgb(var(--card-border))]">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center mx-auto mb-8 shadow-xl shadow-orange-500/25">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center mx-auto mb-8 shadow-xl shadow-orange-500/25 mt-6">
             <Shield className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-[rgb(var(--foreground))] mb-5">
@@ -577,8 +577,8 @@ export default function PlanosPage() {
 
       {/* ── FAQ ─────────────────────────────────────────────────────────── */}
       <section className="w-full py-28 px-4 sm:px-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex flex-col items-center text-center gap-4 mb-16">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex flex-col items-center text-center gap-5 mb-20 mt-4">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[rgb(var(--foreground))]">Perguntas frequentes</h2>
             <p className="text-[rgb(var(--muted-foreground))] text-lg">Tire suas dúvidas antes de escolher seu plano.</p>
           </div>

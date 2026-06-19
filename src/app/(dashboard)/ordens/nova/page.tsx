@@ -71,37 +71,81 @@ function ServicoRow({
   kmAtual: number;
 }) {
   const [showRevisao, setShowRevisao] = useState(!!(servico.proximaRevisaoKm || servico.proximaRevisaoData));
+  const [editing, setEditing] = useState(false);
+  const [editDesc, setEditDesc] = useState(servico.descricao);
+  const [editVal, setEditVal] = useState(String(servico.valor));
+
+  function saveEdit() {
+    onUpdate(servico.id, { descricao: editDesc.trim() || servico.descricao, valor: Number(editVal) || 0 });
+    setEditing(false);
+  }
+
   return (
     <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 overflow-hidden">
       {/* Linha principal */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <span className="flex-1 text-sm text-[rgb(var(--foreground))] font-medium">{servico.descricao}</span>
-        <span className="text-sm font-semibold text-orange-500 flex-shrink-0">{formatCurrency(servico.valor)}</span>
-        <button
-          type="button"
-          onClick={() => setShowRevisao(v => !v)}
-          className={cn(
-            'p-1 rounded-lg transition-colors text-xs flex items-center gap-1 flex-shrink-0',
-            showRevisao
-              ? 'bg-purple-500/15 text-purple-500'
-              : 'text-[rgb(var(--muted-foreground))] hover:bg-purple-500/10 hover:text-purple-500'
-          )}
-          title="Definir próxima revisão para este serviço"
-        >
-          <CalendarClock className="w-3.5 h-3.5" />
-          <ChevronUp className={cn('w-3 h-3 transition-transform', !showRevisao && 'rotate-180')} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onRemove(servico.id)}
-          className="p-1 text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+      {editing ? (
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <input
+            autoFocus
+            value={editDesc}
+            onChange={e => setEditDesc(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            className={cn(inputCn, 'flex-1 text-sm py-1.5')}
+            placeholder="Descrição do serviço"
+          />
+          <input
+            type="number"
+            value={editVal}
+            onChange={e => setEditVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            className={cn(inputCn, 'w-24 text-sm py-1.5')}
+            min="0" step="0.01"
+          />
+          <button type="button" onClick={saveEdit} className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 flex-shrink-0">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="p-1.5 rounded-lg border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:text-red-500 flex-shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <span className="flex-1 text-sm text-[rgb(var(--foreground))] font-medium">{servico.descricao}</span>
+          <span className="text-sm font-semibold text-orange-500 flex-shrink-0">{formatCurrency(servico.valor)}</span>
+          <button
+            type="button"
+            onClick={() => { setEditDesc(servico.descricao); setEditVal(String(servico.valor)); setEditing(true); }}
+            className="p-1 text-[rgb(var(--muted-foreground))] hover:text-blue-500 transition-colors"
+            title="Editar serviço"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRevisao(v => !v)}
+            className={cn(
+              'p-1 rounded-lg transition-colors text-xs flex items-center gap-1 flex-shrink-0',
+              showRevisao
+                ? 'bg-purple-500/15 text-purple-500'
+                : 'text-[rgb(var(--muted-foreground))] hover:bg-purple-500/10 hover:text-purple-500'
+            )}
+            title="Definir próxima revisão para este serviço"
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            <ChevronUp className={cn('w-3 h-3 transition-transform', !showRevisao && 'rotate-180')} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(servico.id)}
+            className="p-1 text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Revisão por serviço */}
-      {showRevisao && (
+      {!editing && showRevisao && (
         <div className="px-3 pb-3 pt-0 border-t border-purple-500/15 bg-purple-500/5">
           <p className="text-xs text-purple-500 font-medium mt-2 mb-2">
             Próxima revisão — {servico.descricao}
@@ -360,8 +404,10 @@ export default function NovaOrdemPage() {
       localStorage.removeItem('os_draft');
       toast.success('OS criada com sucesso!');
       router.push(`/ordens/${id}`);
-    } catch {
-      toast.error('Erro ao salvar OS. Tente novamente.');
+    } catch (err) {
+      console.error('[Nova OS] Erro ao criar:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Erro ao criar OS: ${msg}`);
     }
   }
 

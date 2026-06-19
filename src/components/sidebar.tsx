@@ -20,6 +20,7 @@ import {
   Wrench,
   FileSearch,
   CreditCard,
+  BarChart2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,8 +57,9 @@ const navGroups = [
     label: 'Administrativo',
     color: 'slate' as const,
     items: [
-      { href: '/financeiro', label: 'Financeiro',        icon: Lock, locked: true },
-      { href: '/planos',     label: 'Planos e Preços',   icon: CreditCard },
+      { href: '/financeiro',  label: 'Financeiro',        icon: Lock, locked: true },
+      { href: '/relatorios',  label: 'Relatórios',        icon: BarChart2 },
+      { href: '/planos',      label: 'Planos e Preços',   icon: CreditCard },
     ],
   },
 ];

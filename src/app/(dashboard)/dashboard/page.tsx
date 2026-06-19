@@ -277,7 +277,7 @@ export default function DashboardPage() {
               <CalendarClock className="w-5 h-5 text-purple-500" />
             </div>
             <div>
-              <h3 className="font-bold text-purple-600 dark:text-purple-400 text-base">Revisoes Proximas</h3>
+              <h3 className="font-bold text-purple-600 dark:text-purple-400 text-base">Próximas Revisões</h3>
               <p className="text-xs text-purple-500/70">Clientes que precisam agendar revisao</p>
             </div>
             <span className="ml-auto text-sm font-bold bg-purple-500 text-white px-3 py-1 rounded-full">
@@ -297,21 +297,22 @@ export default function DashboardPage() {
               }
               const revisaoInfo = infoParts.join(' ou ');
 
-              // WhatsApp message: Ola *Nome*! Sua revisao do *veiculo* (*Placa*) esta chegando!
-              const waMsgParts = [
-                `Ola *${a.clienteNome}*!`,
+              const dataFormatada = a.proximaRevisaoData
+                ? new Date(a.proximaRevisaoData + 'T12:00:00').toLocaleDateString('pt-BR')
+                : null;
+
+              const waMsg = [
+                `Olá *${a.clienteNome}*!`,
                 ``,
-                `Sua revisao do *${a.veiculoDesc}* (*${a.veiculoPlaca}*) esta chegando!`,
-              ];
-              if (a.proximaRevisaoData) {
-                waMsgParts.push(`Data: ${new Date(a.proximaRevisaoData + 'T12:00:00').toLocaleDateString('pt-BR')}`);
-              }
-              if (a.proximaRevisaoKm) {
-                const connector = a.proximaRevisaoData ? 'ou ' : '';
-                waMsgParts.push(`${connector}${a.proximaRevisaoKm.toLocaleString('pt-BR')} km`);
-              }
-              waMsgParts.push(``, `Agende sua revisao conosco!`, ``, `_${officeName}_`);
-              const waMsg = waMsgParts.join('\n');
+                `A manutenção do seu veículo *${a.veiculoDesc}* (*${a.veiculoPlaca}*) está se aproximando da data recomendada para nova execução.`,
+                dataFormatada ? `\n📅 Previsão: *${dataFormatada}*` : (a.proximaRevisaoKm ? `\n🔧 Previsão: *${a.proximaRevisaoKm.toLocaleString('pt-BR')} km*` : ''),
+                ``,
+                `A última *${a.servicoDesc}* realizada anteriormente está chegando ao prazo indicado pelo fabricante. Para manter a segurança, o desempenho e a garantia dos componentes, recomendamos agendar a próxima manutenção.`,
+                ``,
+                `Entre em contato conosco para verificar os serviços necessários e agendar seu atendimento.`,
+                ``,
+                `*${officeName}* 🔧`,
+              ].join('\n');
               const waLink = `https://wa.me/55${a.clienteWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(waMsg)}`;
               return (
                 <div key={a.osId + a.servicoDesc} className={cn(
