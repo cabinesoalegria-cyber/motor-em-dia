@@ -174,7 +174,7 @@ export default function OrdemDetailPage() {
   <div style="text-align:right">
     <div class="os-number">${ordem!.numero}</div>
     <div style="margin: 4px 0"><span class="badge">${getStatusLabel(ordem!.status)}</span></div>
-    <div style="font-size:12px;color:#6b7280;">Entrada: ${formatDate(ordem!.dataEntrada)}${ordem!.dataConclusao ? ` · Saída: ${formatDate(ordem!.dataConclusao)}` : ''}</div>
+    <div style="font-size:12px;color:#6b7280;">${ordem!.dataConclusao ? `Saída: ${formatDate(ordem!.dataConclusao)}` : `Entrada: ${formatDate(ordem!.dataEntrada)}`}</div>
   </div>
 </div>
 
@@ -217,10 +217,10 @@ ${ordem!.servicos.length > 0 ? `
 ${ordem!.pecas.length > 0 ? `
 <div class="section-title">Peças Utilizadas</div>
 <table>
-  <thead><tr><th>Peça</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
+  <thead><tr><th>Peça</th><th style="text-align:center">Qtd</th><th style="text-align:right">Total</th></tr></thead>
   <tbody>
-    ${ordem!.pecas.map(p => `<tr><td>${p.nome}</td><td style="text-align:center">${p.quantidade}</td><td>R$ ${p.valorUnitario.toFixed(2).replace('.', ',')}</td><td>R$ ${p.valorTotal.toFixed(2).replace('.', ',')}</td></tr>`).join('')}
-    <tr style="font-weight:700;background:#f0fdf4"><td colspan="3">Subtotal Peças</td><td>R$ ${ordem!.valorPecas.toFixed(2).replace('.', ',')}</td></tr>
+    ${ordem!.pecas.map(p => `<tr><td>${p.nome}</td><td style="text-align:center">${p.quantidade}</td><td style="text-align:right">R$ ${p.valorTotal.toFixed(2).replace('.', ',')}</td></tr>`).join('')}
+    <tr style="font-weight:700;background:#f0fdf4"><td colspan="2">Subtotal Peças</td><td style="text-align:right">R$ ${ordem!.valorPecas.toFixed(2).replace('.', ',')}</td></tr>
   </tbody>
 </table>` : ''}
 
@@ -251,7 +251,7 @@ ${ordem!.pecas.length > 0 ? `
 </div>
 
 <div class="footer">
-  Data de entrega: _____ / _____ / ___________
+  Data de saída: ${ordem!.dataConclusao ? formatDate(ordem!.dataConclusao) : '_____ / _____ / ___________'}
   &nbsp;&nbsp;·&nbsp;&nbsp;
   ${officeName}${officePhone ? ` · ${officePhone}` : ''}${officeAddress ? ` · ${officeAddress}` : ''}
 </div>

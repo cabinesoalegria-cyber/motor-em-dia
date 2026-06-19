@@ -390,8 +390,8 @@ export default function NovaOrdemPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clienteId || !veiculoId || !problema) {
-      toast.error('Preencha os campos obrigatórios: cliente, veículo e problema');
+    if (!clienteId || !veiculoId) {
+      toast.error('Selecione o cliente e o veículo para criar a OS');
       return;
     }
     try {
@@ -528,7 +528,7 @@ export default function NovaOrdemPage() {
         <SectionCard title="Problema Relatado" icon={FileText} color="red">
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Problema *</label>
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Problema</label>
               <textarea
                 value={problema}
                 onChange={(e) => setProblema(e.target.value)}
