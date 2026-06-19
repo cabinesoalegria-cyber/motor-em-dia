@@ -29,6 +29,7 @@ export default function OrdemDetailPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<OrdemServico['status'] | null>(null);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
+  const [pixDesconto, setPixDesconto] = useState(0);
 
   const ordem = ordens.find((o) => o.id === id);
   const cliente = ordem ? clientes.find((c) => c.id === ordem.clienteId) : null;
@@ -47,7 +48,7 @@ export default function OrdemDetailPage() {
     if (status === 'entregue') {
       // Open payment modal before marking as delivered
       setPendingStatus('entregue');
-      setFormas([{ id: generateId(), tipo: 'pix', valor: ordem!.valorTotal }]);
+      setFormas([{ id: generateId(), tipo: 'pix', valor: Math.max(0, (ordem?.valorTotal ?? 0)) }]);
       setShowPaymentModal(true);
       return;
     }
@@ -68,7 +69,7 @@ export default function OrdemDetailPage() {
   }
 
   const totalFormas = formas.reduce((s, f) => s + (f.valor || 0), 0);
-  const valorOS = ordem?.valorTotal ?? 0;
+  const valorOS = Math.max(0, (ordem?.valorTotal ?? 0) - pixDesconto);
   const diffOk = Math.abs(totalFormas - valorOS) < 0.01;
 
   async function confirmPayment() {
@@ -78,9 +79,16 @@ export default function OrdemDetailPage() {
       total: totalFormas,
       dataRegistro: new Date().toISOString(),
     };
-    await updateOrdem(id, { status: 'entregue', pagamento, dataConclusao: new Date().toISOString() });
+    const descObs = pixDesconto > 0 ? `Pagamento em PIX com desconto de ${formatCurrency(pixDesconto)} aplicado. Valor final: ${formatCurrency(totalFormas)}.` : undefined;
+    await updateOrdem(id, {
+      status: 'entregue',
+      pagamento,
+      dataConclusao: new Date().toISOString(),
+      ...(descObs ? { observacoesInternas: (ordem?.observacoesInternas ? ordem.observacoesInternas + '\n' : '') + descObs } : {}),
+    });
     setShowPaymentModal(false);
     setFormas([]);
+    setPixDesconto(0);
     toast.success('OS entregue! Pagamento registrado. 💳');
   }
 
@@ -385,6 +393,13 @@ ${ordem!.pecas.length > 0 ? `
         )}
       </div>
 
+      {(ordem as any).descricaoServicoRealizado && (
+        <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+          <h3 className="font-semibold text-[rgb(var(--foreground))] mb-2">Descrição do Serviço Realizado</h3>
+          <p className="text-sm text-[rgb(var(--muted-foreground))] leading-relaxed whitespace-pre-wrap">{(ordem as any).descricaoServicoRealizado}</p>
+        </div>
+      )}
+
       {/* Services */}
       {ordem.servicos.length > 0 && (
         <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
@@ -464,7 +479,7 @@ ${ordem!.pecas.length > 0 ? `
                 <h2 className="font-bold text-[rgb(var(--foreground))]">Forma de Pagamento</h2>
                 <p className="text-xs text-[rgb(var(--muted-foreground))]">OS {ordem.numero} · Total: {formatCurrency(valorOS)}</p>
               </div>
-              <button onClick={() => setShowPaymentModal(false)} className="p-2 rounded-xl hover:bg-[rgb(var(--muted))] transition-colors">
+              <button onClick={() => { setShowPaymentModal(false); setPixDesconto(0); }} className="p-2 rounded-xl hover:bg-[rgb(var(--muted))] transition-colors">
                 <X className="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
               </button>
             </div>
@@ -528,6 +543,44 @@ ${ordem!.pecas.length > 0 ? `
                 </div>
               ))}
 
+              {/* PIX Discount section */}
+              {formas.some(f => f.tipo === 'pix') && (
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone className="w-4 h-4 text-emerald-500" />
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Desconto PIX</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-[rgb(var(--muted-foreground))] mb-1 block">Valor do desconto (R$)</label>
+                      <input
+                        type="number"
+                        value={pixDesconto || ''}
+                        onChange={e => {
+                          const d = Math.max(0, Number(e.target.value));
+                          setPixDesconto(d);
+                          // Auto-adjust PIX forma value
+                          setFormas(prev => prev.map(f => f.tipo === 'pix' ? { ...f, valor: Math.max(0, (ordem?.valorTotal ?? 0) - d) } : f));
+                        }}
+                        min="0"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="w-full px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                    </div>
+                    {pixDesconto > 0 && (
+                      <div className="text-right">
+                        <p className="text-xs text-[rgb(var(--muted-foreground))]">Valor com desconto</p>
+                        <p className="text-lg font-bold text-emerald-500">{formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)}</p>
+                      </div>
+                    )}
+                  </div>
+                  {pixDesconto > 0 && (
+                    <p className="text-xs text-[rgb(var(--muted-foreground))] mt-2">💡 O valor registrado no financeiro será {formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)} (com desconto aplicado)</p>
+                  )}
+                </div>
+              )}
+
               {/* Add forma */}
               <button type="button" onClick={addForma}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-[rgb(var(--card-border))] text-sm text-[rgb(var(--muted-foreground))] hover:border-emerald-400 hover:text-emerald-500 transition-colors">
@@ -543,8 +596,11 @@ ${ordem!.pecas.length > 0 ? `
                 <span>Total informado</span>
                 <span>{formatCurrency(totalFormas)} {diffOk ? '✓' : `(faltam ${formatCurrency(valorOS - totalFormas)})`}</span>
               </div>
+              {pixDesconto > 0 && (
+                <p className="text-xs text-center text-[rgb(var(--muted-foreground))]">Desconto PIX: {formatCurrency(pixDesconto)} aplicado</p>
+              )}
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowPaymentModal(false)}
+                <button type="button" onClick={() => { setShowPaymentModal(false); setPixDesconto(0); }}
                   className="flex-1 py-3 rounded-2xl border-2 border-[rgb(var(--card-border))] text-sm font-semibold text-[rgb(var(--foreground))] hover:border-orange-400 transition-colors">
                   Cancelar
                 </button>

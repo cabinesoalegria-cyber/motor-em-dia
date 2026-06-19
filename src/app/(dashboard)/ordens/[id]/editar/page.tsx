@@ -20,6 +20,12 @@ const inputCn = cn(
   'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-colors'
 );
 
+// ─── Rounding: frac >= 0.51 → ceil, else floor ───────────────────────────
+function roundPeca(val: number): number {
+  const frac = val - Math.floor(val);
+  return frac >= 0.51 ? Math.ceil(val) : Math.floor(val);
+}
+
 // ─── Linha de Serviço editável (fora do main component) ─────────────────
 function ServicoEditRow({
   servico,
@@ -116,6 +122,7 @@ export default function EditarOrdemPage() {
   const [servicos, setServicos] = useState<ServicoOS[]>(ordem?.servicos || []);
   const [pecasOS, setPecasOS] = useState<PecaOS[]>(ordem?.pecas || []);
   const [problema, setProblema] = useState(ordem?.problemaRelatado || '');
+  const [descricaoRealizado, setDescricaoRealizado] = useState((ordem as any)?.descricaoServicoRealizado || '');
   const [observacoes, setObservacoes] = useState(ordem?.observacoesInternas || '');
   const [quilometragem, setQuilometragem] = useState(String(ordem?.quilometragemAtual || ''));
 
@@ -202,12 +209,13 @@ export default function EditarOrdemPage() {
     if (!novaPeca.trim() || !novaPecaValor) { toast.error('Informe nome e valor da peça'); return; }
     const qtd = Number(novaPecaQtd) || 1;
     const valUnit = Number(novaPecaValor);
+    const valorTotalRounded = roundPeca(qtd * valUnit);
     setPecasOS(prev => [...prev, {
       id: generateId(),
       nome: novaPeca,
       quantidade: qtd,
       valorUnitario: valUnit,
-      valorTotal: qtd * valUnit,
+      valorTotal: valorTotalRounded,
     }]);
     setNovaPeca('');
     setNovaPecaQtd('1');
@@ -220,6 +228,7 @@ export default function EditarOrdemPage() {
       servicos,
       pecas: pecasOS,
       problemaRelatado: problema,
+      descricaoServicoRealizado: descricaoRealizado,
       observacoesInternas: observacoes,
       quilometragemAtual: Number(quilometragem) || ordem!.quilometragemAtual,
       valorMaoDeObra,
@@ -270,6 +279,16 @@ export default function EditarOrdemPage() {
                 onChange={e => setProblema(e.target.value)}
                 className={cn(inputCn, 'resize-none')}
                 rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Serviço Realizado</label>
+              <textarea
+                value={descricaoRealizado}
+                onChange={e => setDescricaoRealizado(e.target.value)}
+                className={cn(inputCn, 'resize-none')}
+                rows={4}
+                placeholder="Descreva detalhadamente o que foi feito, peças trocadas, ajustes realizados..."
               />
             </div>
             <div>

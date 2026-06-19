@@ -90,6 +90,7 @@ export interface OrdemServico {
   veiculoId: string;
   quilometragemAtual: number;
   problemaRelatado: string;
+  descricaoServicoRealizado?: string; // descrição detalhada do que foi feito (não aparece no cliente)
   observacoesInternas?: string;
   mecanico?: string;           // mecânico responsável (interno)
   servicos: ServicoOS[];

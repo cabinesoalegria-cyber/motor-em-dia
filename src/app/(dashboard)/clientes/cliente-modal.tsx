@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useStore } from '@/lib/store';
 import { Cliente } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { X } from 'lucide-react';
+import { X, Car, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 const schema = z.object({
@@ -44,8 +44,134 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   );
 }
 
+// ─── Veículo section (only for new clients) ───────────────────────────────
+interface VeiculoForm {
+  placa: string;
+  marca: string;
+  modelo: string;
+  ano: string;
+  cor: string;
+  quilometragem: string;
+}
+
+const MARCAS_SUGESTOES = [
+  'Chevrolet', 'Fiat', 'Ford', 'Volkswagen', 'Honda', 'Toyota', 'Hyundai',
+  'Renault', 'Nissan', 'Jeep', 'Mitsubishi', 'Peugeot', 'Citroën', 'Kia',
+  'BMW', 'Mercedes-Benz', 'Audi', 'Volvo', 'Land Rover', 'Subaru',
+];
+
+function VeiculoSection({
+  value,
+  onChange,
+}: {
+  value: VeiculoForm;
+  onChange: (v: VeiculoForm) => void;
+}) {
+  const currentYear = new Date().getFullYear();
+
+  function set(field: keyof VeiculoForm, val: string) {
+    onChange({ ...value, [field]: val });
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Placa */}
+      <div>
+        <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Placa *</label>
+        <input
+          type="text"
+          placeholder="ABC-1234 ou ABC1D23"
+          value={value.placa}
+          onChange={e => set('placa', e.target.value.toUpperCase())}
+          className={inputCn}
+          maxLength={8}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* Marca */}
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Marca *</label>
+          <input
+            list="marcas-list"
+            type="text"
+            placeholder="Ex: Chevrolet"
+            value={value.marca}
+            onChange={e => set('marca', e.target.value)}
+            className={inputCn}
+          />
+          <datalist id="marcas-list">
+            {MARCAS_SUGESTOES.map(m => <option key={m} value={m} />)}
+          </datalist>
+        </div>
+
+        {/* Modelo */}
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Modelo *</label>
+          <input
+            type="text"
+            placeholder="Ex: Onix 1.0"
+            value={value.modelo}
+            onChange={e => set('modelo', e.target.value)}
+            className={inputCn}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {/* Ano */}
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Ano</label>
+          <input
+            type="number"
+            placeholder={String(currentYear)}
+            value={value.ano}
+            onChange={e => set('ano', e.target.value)}
+            className={inputCn}
+            min="1950"
+            max={String(currentYear + 1)}
+          />
+        </div>
+
+        {/* Cor */}
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Cor</label>
+          <input
+            type="text"
+            placeholder="Branco"
+            value={value.cor}
+            onChange={e => set('cor', e.target.value)}
+            className={inputCn}
+          />
+        </div>
+
+        {/* Km */}
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Km atual</label>
+          <input
+            type="number"
+            placeholder="0"
+            value={value.quilometragem}
+            onChange={e => set('quilometragem', e.target.value)}
+            className={inputCn}
+            min="0"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Modal ──────────────────────────────────────────────────────────
 export function ClienteModal({ cliente, onClose }: Props) {
-  const { addCliente, updateCliente } = useStore();
+  const { addCliente, updateCliente, addVeiculo } = useStore();
+  const isNew = !cliente;
+
+  // Vehicle toggle (only for new clients)
+  const [addVeiculoEnabled, setAddVeiculoEnabled] = useState(false);
+  const [veiculo, setVeiculo] = useState<VeiculoForm>({
+    placa: '', marca: '', modelo: '', ano: '', cor: '', quilometragem: '',
+  });
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -62,12 +188,10 @@ export function ClienteModal({ cliente, onClose }: Props) {
       : { whatsapp: '', telefone: '' },
   });
 
-  // Watch telefone to auto-fill WhatsApp if WhatsApp is empty or same as old phone
+  // Watch telefone to auto-fill WhatsApp if new client
   const telefoneValue = watch('telefone');
-  const whatsappValue = watch('whatsapp');
 
   useEffect(() => {
-    // Only auto-fill if creating new client or whatsapp is empty/same as telefone
     if (!cliente && telefoneValue) {
       setValue('whatsapp', telefoneValue);
     }
@@ -78,9 +202,10 @@ export function ClienteModal({ cliente, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  function onSubmit(data: FormData) {
+  async function onSubmit(data: FormData) {
     if (cliente) {
-      updateCliente(cliente.id, {
+      // Editing: only update client
+      await updateCliente(cliente.id, {
         nome: data.nome,
         telefone: data.telefone,
         whatsapp: data.whatsapp,
@@ -90,8 +215,13 @@ export function ClienteModal({ cliente, onClose }: Props) {
         observacoes: data.observacoes || '',
       } as any);
       toast.success('Cliente atualizado!');
-    } else {
-      addCliente({
+      onClose();
+      return;
+    }
+
+    try {
+      // New client — await to get the returned ID
+      const clienteId = await addCliente({
         nome: data.nome,
         telefone: data.telefone,
         whatsapp: data.whatsapp,
@@ -100,8 +230,29 @@ export function ClienteModal({ cliente, onClose }: Props) {
         endereco: data.endereco || '',
         observacoes: data.observacoes || '',
       } as any);
-      toast.success('Cliente cadastrado!');
+
+      // Save vehicle if enabled and at least placa+marca+modelo filled
+      if (addVeiculoEnabled && veiculo.placa.trim() && veiculo.marca.trim() && veiculo.modelo.trim() && clienteId) {
+        await addVeiculo({
+          clienteId,
+          marca: veiculo.marca.trim(),
+          modelo: veiculo.modelo.trim(),
+          placa: veiculo.placa.trim().toUpperCase(),
+          ano: parseInt(veiculo.ano) || new Date().getFullYear(),
+          cor: veiculo.cor.trim() || '',
+          quilometragem: parseInt(veiculo.quilometragem) || 0,
+          observacoes: '',
+        } as any);
+        toast.success('Cliente e veículo cadastrados! 🚗');
+      } else {
+        toast.success('Cliente cadastrado!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao cadastrar. Tente novamente.');
+      return;
     }
+
     onClose();
   }
 
@@ -123,6 +274,7 @@ export function ClienteModal({ cliente, onClose }: Props) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
+          {/* ── Cliente fields ── */}
           <Field label="Nome completo *" error={errors.nome?.message}>
             <input {...register('nome')} className={inputCn} placeholder="João da Silva" autoFocus />
           </Field>
@@ -180,6 +332,40 @@ export function ClienteModal({ cliente, onClose }: Props) {
             />
           </Field>
 
+          {/* ── Veículo section (new client only) ── */}
+          {isNew && (
+            <div className="border border-[rgb(var(--card-border))] rounded-xl overflow-hidden">
+              {/* Toggle header */}
+              <button
+                type="button"
+                onClick={() => setAddVeiculoEnabled(v => !v)}
+                className={cn(
+                  'w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors',
+                  addVeiculoEnabled
+                    ? 'bg-blue-500/10 text-blue-500 border-b border-[rgb(var(--card-border))]'
+                    : 'bg-[rgb(var(--muted))] text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Car className="w-4 h-4" />
+                  {addVeiculoEnabled ? 'Cadastrar veículo junto' : '+ Adicionar veículo (opcional)'}
+                </span>
+                {addVeiculoEnabled ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {/* Vehicle fields */}
+              {addVeiculoEnabled && (
+                <div className="p-4">
+                  <p className="text-xs text-[rgb(var(--muted-foreground))] mb-3">
+                    O veículo será salvo automaticamente na aba Veículos vinculado a este cliente.
+                  </p>
+                  <VeiculoSection value={veiculo} onChange={setVeiculo} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Actions ── */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"

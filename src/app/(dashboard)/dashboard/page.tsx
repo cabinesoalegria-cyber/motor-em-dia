@@ -19,6 +19,7 @@ import {
   Gauge,
   CalendarClock,
   MessageSquare,
+  X,
 } from 'lucide-react';
 
 function StatCard({
@@ -129,6 +130,16 @@ function calcularLembretes(
 export default function DashboardPage() {
   const { ordens, clientes, agendamentos, veiculos } = useStore();
 
+  const [hiddenAlerts, setHiddenAlerts] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('autoflow-hidden-alerts') || '[]'); } catch { return []; }
+  });
+
+  function hideAlert(key: string) {
+    const newHidden = [...hiddenAlerts, key];
+    setHiddenAlerts(newHidden);
+    localStorage.setItem('autoflow-hidden-alerts', JSON.stringify(newHidden));
+  }
+
   const today = new Date().toISOString().split('T')[0];
 
   // ── OS Stats ────────────────────────────────────────────────
@@ -206,7 +217,7 @@ export default function DashboardPage() {
         if (svc.proximaRevisaoData) {
           const revisaoDate = new Date(svc.proximaRevisaoData + 'T12:00:00');
           const diffDays = Math.ceil((revisaoDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          if (diffDays <= 30) { visible = true; if (diffDays <= 7) urgente = true; }
+          if (diffDays <= 10) { visible = true; if (diffDays <= 3) urgente = true; }
         }
         if (svc.proximaRevisaoKm && veiculo) {
           const kmFaltando = svc.proximaRevisaoKm - veiculo.quilometragem;
@@ -232,6 +243,9 @@ export default function DashboardPage() {
 
     return alerts.sort((a, b) => (b.urgente ? 1 : 0) - (a.urgente ? 1 : 0));
   }, [ordens, clientes, veiculos]);
+
+  const visibleAlerts = revisaoAlerts.filter(a => !hiddenAlerts.includes(`${a.osId}-${a.servicoDesc}`));
+  const hiddenRevAlerts = revisaoAlerts.filter(a => hiddenAlerts.includes(`${a.osId}-${a.servicoDesc}`));
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
@@ -266,7 +280,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── ALERTAS DE PRÓXIMA REVISÃO ────────────────────── */}
-      {revisaoAlerts.length > 0 && (
+      {visibleAlerts.length > 0 && (
         <div className={cn(
           'rounded-2xl border-l-4 border border-purple-500/40 shadow-md shadow-purple-500/10',
           'bg-gradient-to-r from-purple-500/8 to-[rgb(var(--card))]',
@@ -281,11 +295,12 @@ export default function DashboardPage() {
               <p className="text-xs text-purple-500/70">Clientes que precisam agendar revisao</p>
             </div>
             <span className="ml-auto text-sm font-bold bg-purple-500 text-white px-3 py-1 rounded-full">
-              {revisaoAlerts.length} alerta{revisaoAlerts.length !== 1 ? 's' : ''}
+              {visibleAlerts.length} alerta{visibleAlerts.length !== 1 ? 's' : ''}
             </span>
           </div>
           <div className="px-5 py-4 space-y-3">
-            {revisaoAlerts.map((a) => {
+            {visibleAlerts.map((a) => {
+              const alertKey = `${a.osId}-${a.servicoDesc}`;
               const officeName = typeof window !== 'undefined' ? localStorage.getItem('autoflow-office-name') || 'Sua Oficina' : 'Sua Oficina';
               // Build revisaoInfo for display
               const infoParts: string[] = [];
@@ -315,7 +330,7 @@ export default function DashboardPage() {
               ].join('\n');
               const waLink = `https://wa.me/55${a.clienteWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(waMsg)}`;
               return (
-                <div key={a.osId + a.servicoDesc} className={cn(
+                <div key={alertKey} className={cn(
                   'flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all',
                   a.urgente
                     ? 'bg-red-500/8 border-red-500/25 shadow-sm shadow-red-500/10'
@@ -350,12 +365,24 @@ export default function DashboardPage() {
                       <Wrench className="w-3.5 h-3.5" />
                     </Link>
                     {a.clienteWhatsapp && (
-                      <a href={waLink} target="_blank" rel="noopener noreferrer"
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => hideAlert(alertKey)}
                         className="p-2 rounded-lg text-[rgb(var(--muted-foreground))] hover:text-green-500 hover:bg-green-500/10 transition-colors"
-                        title="Avisar pelo WhatsApp">
+                        title="Avisar pelo WhatsApp"
+                      >
                         <MessageSquare className="w-3.5 h-3.5" />
                       </a>
                     )}
+                    <button
+                      onClick={() => hideAlert(alertKey)}
+                      className="p-2 rounded-lg text-[rgb(var(--muted-foreground))] hover:text-slate-500 hover:bg-slate-500/10 transition-colors"
+                      title="Ocultar lembrete"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );
@@ -557,6 +584,52 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ── LEMBRETES DE REVISÃO OCULTOS (sininho) ──────────── */}
+      {hiddenRevAlerts.length > 0 && (
+        <div className={cn('rounded-2xl border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[rgb(var(--card-border))]">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-slate-500" />
+              <h3 className="font-semibold text-sm text-[rgb(var(--foreground))]">Lembretes de Revisão</h3>
+              <span className="text-xs bg-slate-500/10 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{hiddenRevAlerts.length}</span>
+            </div>
+            <button
+              onClick={() => {
+                setHiddenAlerts([]);
+                localStorage.removeItem('autoflow-hidden-alerts');
+              }}
+              className="text-xs text-orange-500 hover:underline"
+            >
+              Mostrar todos
+            </button>
+          </div>
+          <div className="divide-y divide-[rgb(var(--card-border))]">
+            {hiddenRevAlerts.map(a => {
+              const alertKey = `${a.osId}-${a.servicoDesc}`;
+              return (
+                <div key={alertKey} className="flex items-center gap-3 px-5 py-3">
+                  <Bell className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[rgb(var(--foreground))] truncate">{a.clienteNome} — {a.veiculoDesc} ({a.veiculoPlaca})</p>
+                    <p className="text-xs text-[rgb(var(--muted-foreground))] truncate">{a.servicoDesc}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newHidden = hiddenAlerts.filter(h => h !== alertKey);
+                      setHiddenAlerts(newHidden);
+                      localStorage.setItem('autoflow-hidden-alerts', JSON.stringify(newHidden));
+                    }}
+                    className="text-xs text-orange-500 hover:underline flex-shrink-0"
+                  >
+                    Mostrar
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

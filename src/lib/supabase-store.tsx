@@ -63,6 +63,7 @@ function mapOrdem(r: Row): OrdemServico {
     veiculoId: r.veiculo_id || '',
     quilometragemAtual: r.quilometragem_atual || 0,
     problemaRelatado: r.problema_relatado || '',
+    descricaoServicoRealizado: r.descricao_servico_realizado || undefined,
     observacoesInternas: r.observacoes_internas || '',
     mecanico: r.mecanico || undefined,
     servicos: r.servicos || [],
@@ -412,6 +413,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
     if (data.dataConclusao !== undefined) payload.data_conclusao = data.dataConclusao;
     if (data.lancamentoId !== undefined) payload.lancamento_id = data.lancamentoId;
     if (data.pagamento !== undefined) payload.pagamento = data.pagamento;
+    if (data.descricaoServicoRealizado !== undefined) payload.descricao_servico_realizado = data.descricaoServicoRealizado;
 
     await supabase.from('ordens_servico').update(payload).eq('id', id).eq('empresa_id', empresaId!);
     setOrdens(prev => prev.map(o => o.id === id ? { ...o, ...data } : o));

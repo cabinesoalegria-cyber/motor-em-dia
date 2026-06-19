@@ -25,6 +25,13 @@ export default function ConfiguracoesPage() {
   const [mecanicos, setMecanicos] = useState<string[]>([]);
   const [novoMecanico, setNovoMecanico] = useState('');
 
+  // Import state
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<any>(null);
+  const [importSenha, setImportSenha] = useState('');
+  const [importSenhaError, setImportSenhaError] = useState('');
+  const importFileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     try { setMecanicos(JSON.parse(localStorage.getItem('autoflow-mecanicos') || '[]')); } catch { setMecanicos([]); }
   }, []);
@@ -113,6 +120,62 @@ export default function ConfiguracoesPage() {
     a.click();
     URL.revokeObjectURL(a.href);
     toast.success(`${nome}.xls exportado!`);
+  }
+
+  // Import handlers
+  function handleImportFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (!data.clientes && !data.ordens) {
+          toast.error('Arquivo inválido. Selecione um backup do Motor em Dia.');
+          return;
+        }
+        setPendingImportData(data);
+        setImportSenha('');
+        setImportSenhaError('');
+        setShowImportConfirm(true);
+      } catch {
+        toast.error('Erro ao ler o arquivo. Certifique-se que é um JSON válido.');
+      }
+    };
+    reader.readAsText(file);
+    if (importFileRef.current) importFileRef.current.value = '';
+  }
+
+  function handleConfirmImport() {
+    // Verify password (financeiro password or default admin123)
+    const savedSenha = localStorage.getItem('autoflow-financeiro-senha') || 'admin123';
+    if (importSenha !== savedSenha) {
+      setImportSenhaError('Senha incorreta. Use a senha do Financeiro.');
+      return;
+    }
+    if (!pendingImportData) return;
+    const keyMap: Record<string, string> = {
+      clientes: 'autoflow-clientes',
+      veiculos: 'autoflow-veiculos',
+      ordens: 'autoflow-ordens',
+      pecas: 'autoflow-pecas',
+      lancamentos: 'autoflow-lancamentos',
+      agendamentos: 'autoflow-agendamentos',
+      orcamentos: 'autoflow-orcamentos',
+      contasPagar: 'autoflow-contas-pagar',
+      servicosCatalogo: 'autoflow-servicos-catalogo',
+      lancamentosCaixa: 'autoflow-lancamentos-caixa',
+    };
+    Object.entries(keyMap).forEach(([key, lsKey]) => {
+      if (pendingImportData[key] !== undefined) {
+        localStorage.setItem(lsKey, JSON.stringify(pendingImportData[key]));
+      }
+    });
+    setShowImportConfirm(false);
+    setPendingImportData(null);
+    setImportSenha('');
+    toast.success('Backup restaurado com sucesso! Recarregando...');
+    setTimeout(() => window.location.reload(), 1500);
   }
 
   // Senha
@@ -215,6 +278,7 @@ export default function ConfiguracoesPage() {
   );
 
   return (
+    <>
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Office Info */}
       <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
@@ -418,47 +482,19 @@ export default function ConfiguracoesPage() {
             <p className="text-sm font-bold text-[rgb(var(--foreground))]">Importar Backup (JSON)</p>
             <p className="text-xs text-[rgb(var(--muted-foreground))]">Restaura dados de um arquivo de backup anterior</p>
           </div>
-          <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-colors flex-shrink-0 cursor-pointer">
+          <button
+            onClick={() => importFileRef.current?.click()}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-colors flex-shrink-0"
+          >
             <Upload className="w-4 h-4" /> Importar Backup
-            <input
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                  try {
-                    const data = JSON.parse(ev.target?.result as string);
-                    if (!data.clientes && !data.ordens) {
-                      toast.error('Arquivo inválido. Selecione um backup do Motor em Dia.');
-                      return;
-                    }
-                    // Store keys mapping
-                    const keyMap: Record<string, string> = {
-                      clientes: 'autoflow-clientes',
-                      veiculos: 'autoflow-veiculos',
-                      ordens: 'autoflow-ordens',
-                      pecas: 'autoflow-pecas',
-                      lancamentos: 'autoflow-lancamentos',
-                      agendamentos: 'autoflow-agendamentos',
-                      orcamentos: 'autoflow-orcamentos',
-                    };
-                    Object.entries(keyMap).forEach(([key, lsKey]) => {
-                      if (data[key]) localStorage.setItem(lsKey, JSON.stringify(data[key]));
-                    });
-                    toast.success('Backup restaurado! Recarregue a página para ver os dados.');
-                    setTimeout(() => window.location.reload(), 2000);
-                  } catch {
-                    toast.error('Erro ao ler o arquivo. Certifique-se que é um JSON válido.');
-                  }
-                };
-                reader.readAsText(file);
-                e.target.value = '';
-              }}
-            />
-          </label>
+          </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFileSelect}
+          />
         </div>
 
         {/* Exportações individuais */}
@@ -562,5 +598,62 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
     </div>
+
+      {/* Import Confirmation Modal */}
+      {showImportConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] rounded-2xl shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Upload className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-[rgb(var(--foreground))]">Confirmar Importação</h3>
+                <p className="text-xs text-[rgb(var(--muted-foreground))]">Esta ação substituirá todos os dados atuais</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 mb-4">
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">⚠️ Atenção: todos os dados atuais (clientes, OS, veículos, financeiro, etc.) serão substituídos pelos dados do backup. Esta ação não pode ser desfeita.</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">Senha do Financeiro para confirmar</label>
+              <input
+                type="password"
+                value={importSenha}
+                onChange={e => { setImportSenha(e.target.value); setImportSenhaError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleConfirmImport()}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-xl text-sm border',
+                  'bg-[rgb(var(--input-bg))] border-[rgb(var(--input-border))]',
+                  'text-[rgb(var(--foreground))]',
+                  'focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500',
+                  importSenhaError ? 'border-red-500' : ''
+                )}
+                placeholder="Digite a senha do Financeiro"
+                autoFocus
+              />
+              {importSenhaError && <p className="mt-1 text-xs text-red-500">{importSenhaError}</p>}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowImportConfirm(false); setPendingImportData(null); setImportSenha(''); }}
+                className="flex-1 py-2.5 rounded-xl border border-[rgb(var(--input-border))] text-sm font-medium text-[rgb(var(--foreground))] hover:bg-[rgb(var(--muted))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
+              >
+                Importar e Substituir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
