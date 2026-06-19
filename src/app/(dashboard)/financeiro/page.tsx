@@ -164,10 +164,17 @@ function RelatoriosTab() {
   const todayStr = new Date().toISOString().split('T')[0];
   const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
 
-  const [dataInicio, setDataInicio] = useState(firstOfMonth);
-  const [dataFim,    setDataFim]    = useState(todayStr);
-  const [mecanicoSel, setMecanicoSel] = useState('todos');
-  const [percentagem, setPercentagem] = useState(40);
+  const [dataInicio,   setDataInicio]   = useState(firstOfMonth);
+  const [dataFim,      setDataFim]      = useState(todayStr);
+  const [mecanicoSel,  setMecanicoSel]  = useState('todos');
+  const [percentagem,  setPercentagem]  = useState(40);
+  const [pctInput,     setPctInput]     = useState('40');
+
+  function handlePctChange(v: string) {
+    setPctInput(v);
+    const n = parseFloat(v);
+    if (!isNaN(n) && n >= 0 && n <= 100) setPercentagem(n);
+  }
 
   const mecanicosDisponiveis = useMemo(() => {
     const s = new Set<string>();
@@ -200,10 +207,10 @@ function RelatoriosTab() {
         'OS': o.numero,
         'Data': o.dataEntrada,
         'Cliente': c?.nome || '',
-        'Ve\u00edculo': v ? `${v.marca} ${v.modelo} ${v.placa}` : '',
-        'Mec\u00e2nico': o.mecanico || '',
+        'Veículo': v ? `${v.marca} ${v.modelo} ${v.placa}` : '',
+        'Mecânico': o.mecanico || '',
         'MO (R$)': o.valorMaoDeObra,
-        'Pe\u00e7as (R$)': o.valorPecas,
+        'Peças (R$)': o.valorPecas,
         'Total (R$)': o.valorTotal,
         [`${percentagem}% MO (R$)`]: pct,
         'Status': o.status,
@@ -227,7 +234,7 @@ function RelatoriosTab() {
   }
 
   function exportPDF() {
-    const nome = mecanicoSel === 'todos' ? 'Todos os Mec\u00e2nicos' : mecanicoSel;
+    const nome = mecanicoSel === 'todos' ? 'Todos os Mecânicos' : mecanicoSel;
     const d1 = new Date(dataInicio + 'T12:00').toLocaleDateString('pt-BR');
     const d2 = new Date(dataFim    + 'T12:00').toLocaleDateString('pt-BR');
     const tableRows = ordensFiltradas.map(o => {
@@ -239,10 +246,10 @@ function RelatoriosTab() {
     }).join('');
     const moFmt  = totalMO.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const pagFmt = valorPagar.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-    const html = `<h1>Relat\u00f3rio de Mec\u00e2nicos \u2014 Motor em Dia</h1><p><b>Mec\u00e2nico:</b> ${nome} &nbsp;|&nbsp; <b>Per\u00edodo:</b> ${d1} a ${d2} &nbsp;|&nbsp; <b>%:</b> ${percentagem}%</p><hr><table><thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Ve\u00edculo</th><th>Mec\u00e2nico</th><th>M\u00e3o de Obra</th><th>${percentagem}% a Pagar</th></tr></thead><tbody>${tableRows}</tbody></table><hr><p class="total">Total M\u00e3o de Obra: <strong>${moFmt}</strong> &nbsp;|&nbsp; ${percentagem}% a Pagar: <strong>${pagFmt}</strong></p>`;
+    const html = `<h1>Relatório de Mecânicos — Motor em Dia</h1><p><b>Mecânico:</b> ${nome} &nbsp;|&nbsp; <b>Período:</b> ${d1} a ${d2} &nbsp;|&nbsp; <b>%:</b> ${percentagem}%</p><hr><table><thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Mecânico</th><th>Mão de Obra</th><th>${percentagem}% a Pagar</th></tr></thead><tbody>${tableRows}</tbody></table><hr><p class="total">Total Mão de Obra: <strong>${moFmt}</strong> &nbsp;|&nbsp; ${percentagem}% a Pagar: <strong>${pagFmt}</strong></p>`;
     const w = window.open('','_blank','width=1000,height=750');
     if (!w) { toast.error('Popup bloqueado. Permita popups para este site.'); return; }
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relat\u00f3rio</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f3f4f6;font-weight:700}h1{font-size:18px;margin:0 0 6px}hr{border:1px solid #e5e7eb;margin:10px 0}.total{background:#fefce8;padding:8px 14px;border-radius:4px;font-size:13px}@media print{.noprint{display:none}}</style></head><body>${html}<br><button class="noprint" onclick="window.print()">Imprimir</button></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f3f4f6;font-weight:700}h1{font-size:18px;margin:0 0 6px}hr{border:1px solid #e5e7eb;margin:10px 0}.total{background:#fefce8;padding:8px 14px;border-radius:4px;font-size:13px}@media print{.noprint{display:none}}</style></head><body>${html}<br><button class="noprint" onclick="window.print()">Imprimir</button></body></html>`);
     w.document.close(); w.focus();
   }
 
@@ -251,11 +258,11 @@ function RelatoriosTab() {
       {/* Filtros */}
       <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
         <h3 className="font-semibold text-[rgb(var(--foreground))] mb-4 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-500" /> Filtros do Relat\u00f3rio
+          <Filter className="w-4 h-4 text-slate-500" /> Filtros do Relatório
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Data In\u00edcio</label>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Data Início</label>
             <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className={inputCn} />
           </div>
           <div>
@@ -263,23 +270,35 @@ function RelatoriosTab() {
             <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={inputCn} />
           </div>
           <div>
-            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Mec\u00e2nico</label>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Mecânico</label>
             <select value={mecanicoSel} onChange={e => setMecanicoSel(e.target.value)} className={inputCn}>
-              <option value="todos">Todos os mec\u00e2nicos</option>
+              <option value="todos">Todos os mecânicos</option>
               {mecanicosDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">% M\u00e3o de Obra</label>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">% Mão de Obra</label>
             <div className="relative">
-              <input type="number" value={percentagem} onChange={e => setPercentagem(Number(e.target.value))}
-                min="0" max="100" step="0.5" className={cn(inputCn, 'pr-8')} />
+              <input
+                type="text"
+                inputMode="decimal"
+                value={pctInput}
+                onChange={e => handlePctChange(e.target.value)}
+                onBlur={() => setPctInput(String(percentagem))}
+                className={cn(inputCn, 'pr-8')}
+                placeholder="40"
+              />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[rgb(var(--muted-foreground))]">%</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2 mt-3">
-          {[{l:'Hoje',f:()=>{setDataInicio(todayStr);setDataFim(todayStr);}},{l:'M\u00eas',f:()=>{setDataInicio(firstOfMonth);setDataFim(todayStr);}},{l:'Trim.',f:()=>{const t=new Date();t.setMonth(t.getMonth()-3);setDataInicio(t.toISOString().split('T')[0]);setDataFim(todayStr);}},{l:'12M',f:()=>{const t=new Date();t.setFullYear(t.getFullYear()-1);setDataInicio(t.toISOString().split('T')[0]);setDataFim(todayStr);}}].map(({l,f})=>(
+          {[
+            { l: 'Hoje',  f: () => { setDataInicio(todayStr); setDataFim(todayStr); } },
+            { l: 'Mês',   f: () => { setDataInicio(firstOfMonth); setDataFim(todayStr); } },
+            { l: 'Trim.', f: () => { const t=new Date(); t.setMonth(t.getMonth()-3); setDataInicio(t.toISOString().split('T')[0]); setDataFim(todayStr); } },
+            { l: '12M',   f: () => { const t=new Date(); t.setFullYear(t.getFullYear()-1); setDataInicio(t.toISOString().split('T')[0]); setDataFim(todayStr); } },
+          ].map(({ l, f }) => (
             <button key={l} onClick={f} className="px-3 py-1 rounded-lg text-xs border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-orange-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all">{l}</button>
           ))}
         </div>
@@ -288,11 +307,11 @@ function RelatoriosTab() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'OS no Per\u00edodo',    val: ordensFiltradas.length.toString(), c: 'text-blue-500' },
-          { label: 'Total M\u00e3o de Obra', val: formatCurrency(totalMO),           c: 'text-orange-500' },
-          { label: `${percentagem}% a Pagar`, val: formatCurrency(valorPagar),       c: 'text-emerald-500' },
-          { label: 'Total Faturado',          val: formatCurrency(totalFat),          c: 'text-purple-500' },
-        ].map(({label, val, c}) => (
+          { label: 'OS no Período',     val: ordensFiltradas.length.toString(), c: 'text-blue-500' },
+          { label: 'Total Mão de Obra', val: formatCurrency(totalMO),           c: 'text-orange-500' },
+          { label: `${percentagem}% a Pagar`, val: formatCurrency(valorPagar),  c: 'text-emerald-500' },
+          { label: 'Total Faturado',    val: formatCurrency(totalFat),           c: 'text-purple-500' },
+        ].map(({ label, val, c }) => (
           <div key={label} className={cn('rounded-2xl p-4 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
             <p className="text-xs text-[rgb(var(--muted-foreground))] mb-1">{label}</p>
             <p className={cn('text-xl font-bold', c)}>{val}</p>
@@ -303,7 +322,7 @@ function RelatoriosTab() {
       {/* OS Table */}
       <div className={cn('rounded-2xl border overflow-hidden', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
         <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--card-border))]">
-          <h3 className="font-semibold text-[rgb(var(--foreground))]">Ordens de Servi\u00e7o</h3>
+          <h3 className="font-semibold text-[rgb(var(--foreground))]">Ordens de Serviço</h3>
           <div className="flex gap-2">
             <button onClick={exportXLS} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-blue-400 hover:text-blue-500 hover:bg-blue-500/5 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> XLS
@@ -317,7 +336,7 @@ function RelatoriosTab() {
           <div className="py-12 text-center text-[rgb(var(--muted-foreground))]">
             <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p className="font-medium">Nenhuma OS encontrada</p>
-            <p className="text-sm mt-1">Ajuste o per\u00edodo ou o mec\u00e2nico selecionado</p>
+            <p className="text-sm mt-1">Ajuste o período ou o mecânico selecionado</p>
           </div>
         ) : (
           <div className="divide-y divide-[rgb(var(--card-border))]">
@@ -325,7 +344,7 @@ function RelatoriosTab() {
               <span className="col-span-2">OS</span>
               <span className="col-span-2">Data</span>
               <span className="col-span-3">Cliente</span>
-              <span className="col-span-2">M\u00e3o de Obra</span>
+              <span className="col-span-2">Mão de Obra</span>
               <span className="col-span-3 text-right">{percentagem}% MO</span>
             </div>
             {ordensFiltradas.map(o => {
@@ -343,7 +362,7 @@ function RelatoriosTab() {
                     {new Date(o.dataEntrada+'T12:00').toLocaleDateString('pt-BR')}
                   </span>
                   <div className="flex-1 sm:col-span-3 min-w-0">
-                    <p className="text-sm font-medium text-[rgb(var(--foreground))] truncate">{c?.nome||'\u2014'}</p>
+                    <p className="text-sm font-medium text-[rgb(var(--foreground))] truncate">{c?.nome || '—'}</p>
                     {v && <p className="text-xs text-[rgb(var(--muted-foreground))] truncate">{v.placa}</p>}
                   </div>
                   <span className="sm:col-span-2 text-sm font-semibold text-orange-500">{formatCurrency(o.valorMaoDeObra)}</span>
@@ -374,7 +393,7 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
   // Tab state
   const [tab, setTab] = useState<'financeiro' | 'relatorios'>('financeiro');
 
-  // Lan\u00e7amentos state
+  // Lançamentos state
   const [showLancModal, setShowLancModal] = useState(false);
   const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada');
   const [descricao, setDescricao] = useState('');
@@ -459,11 +478,17 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
 
       {/* Tab selector */}
       <div className="flex gap-1 p-1 bg-[rgb(var(--muted))] rounded-xl">
-        {([{key:'financeiro',label:'Financeiro',icon:DollarSign},{key:'relatorios',label:'Rel. Mec\u00e2nicos',icon:BarChart2}] as const).map(({key,label,icon:Icon})=>(
+        {([
+          { key: 'financeiro' as const,  label: 'Financeiro',     icon: DollarSign },
+          { key: 'relatorios' as const,  label: 'Rel. Mecânicos', icon: BarChart2   },
+        ]).map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-all',
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200',
               tab === key
-                ? 'bg-[rgb(var(--card))] text-orange-500 shadow-sm'
+                ? key === 'relatorios'
+                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30'
+                  : 'bg-[rgb(var(--card))] text-[rgb(var(--foreground))] shadow-sm'
                 : 'text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]'
             )}>
             <Icon className="w-4 h-4" />
