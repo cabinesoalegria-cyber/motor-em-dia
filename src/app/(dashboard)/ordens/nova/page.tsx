@@ -58,6 +58,12 @@ const inputCn = cn(
   'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-colors'
 );
 
+// ─── Rounding helper for peças totals ────────────────────────────
+function roundPeca(val: number): number {
+  const frac = val - Math.floor(val);
+  return frac >= 0.51 ? Math.ceil(val) : Math.floor(val);
+}
+
 // ─── Serviço individual com revisão embutida ─────────────────────
 function ServicoRow({
   servico,
@@ -203,6 +209,7 @@ export default function NovaOrdemPage() {
   // — Problema
   const [problema, setProblema] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  const [descricaoRealizado, setDescricaoRealizado] = useState('');
 
   // — Mecânico
   const [mecanico, setMecanico] = useState('');
@@ -252,6 +259,7 @@ export default function NovaOrdemPage() {
         if (draft.status) setStatus(draft.status);
         if (draft.problema) setProblema(draft.problema);
         if (draft.observacoes) setObservacoes(draft.observacoes);
+        if (draft.descricaoRealizado) setDescricaoRealizado(draft.descricaoRealizado);
         if (draft.mecanico) setMecanico(draft.mecanico);
         if (Array.isArray(draft.servicos)) setServicos(draft.servicos);
         if (Array.isArray(draft.pecasOS)) setPecasOS(draft.pecasOS);
@@ -274,6 +282,7 @@ export default function NovaOrdemPage() {
             status,
             problema,
             observacoes,
+            descricaoRealizado,
             mecanico,
             servicos,
             pecasOS,
@@ -282,7 +291,7 @@ export default function NovaOrdemPage() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [clienteId, veiculoId, quilometragem, status, problema, observacoes, mecanico, servicos, pecasOS]);
+  }, [clienteId, veiculoId, quilometragem, status, problema, observacoes, descricaoRealizado, mecanico, servicos, pecasOS]);
 
   // ─── Derived values ───────────────────────────────────────────
   const clienteVeiculos = veiculos.filter((v) => v.clienteId === clienteId);
@@ -349,14 +358,14 @@ export default function NovaOrdemPage() {
     const qtd = Number(novaPecaQtd) || 1;
     const valUnit = Number(novaPecaValor);
     const markup = Number(novaPecaMarkup) || 0;
-    const valFinal = valUnit * (1 + markup / 100);
+    const rawTotal = qtd * valUnit * (1 + markup / 100);
     setPecasOS(prev => [...prev, {
       id: generateId(),
       nome: novaPeca,
       quantidade: qtd,
       valorUnitario: valUnit,
       markup,
-      valorTotal: qtd * valFinal,
+      valorTotal: roundPeca(rawTotal),
     }]);
     setNovaPeca('');
     setNovaPecaQtd('1');
@@ -392,6 +401,7 @@ export default function NovaOrdemPage() {
         quilometragemAtual: Number(quilometragem) || 0,
         problemaRelatado: problema,
         observacoesInternas: observacoes,
+        descricaoServicoRealizado: descricaoRealizado,
         mecanico,
         servicos,
         pecas: pecasOS,
@@ -551,6 +561,16 @@ export default function NovaOrdemPage() {
                 placeholder="Anotações internas da equipe (não aparece no relatório do cliente)..."
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Serviço Realizado</label>
+              <textarea
+                value={descricaoRealizado}
+                onChange={(e) => setDescricaoRealizado(e.target.value)}
+                className={cn(inputCn, 'resize-none')}
+                rows={4}
+                placeholder="Descreva detalhadamente o que foi feito..."
+              />
+            </div>
           </div>
         </SectionCard>
 
@@ -691,7 +711,7 @@ export default function NovaOrdemPage() {
                           const qtd = Number(editQtd) || 1;
                           const val = Number(editValor) || 0;
                           const mk = Number(editMarkup) || 0;
-                          const total = qtd * val * (1 + mk / 100);
+                          const total = roundPeca(qtd * val * (1 + mk / 100));
                           setPecasOS(prev => prev.map(x =>
                             x.id === p.id
                               ? { ...x, nome: editNome, quantidade: qtd, valorUnitario: val, markup: mk, valorTotal: total }

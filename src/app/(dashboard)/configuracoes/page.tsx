@@ -13,7 +13,11 @@ import Link from 'next/link';
 export default function ConfiguracoesPage() {
   const { theme, toggleTheme } = useTheme();
   const { empresa, refreshEmpresa } = useAuth();
-  const { clientes, veiculos, ordens, pecas, lancamentos, agendamentos, orcamentos } = useStore();
+  const {
+    clientes, veiculos, ordens, pecas, lancamentos, agendamentos, orcamentos,
+    addCliente, addVeiculo, addOrdem, addPeca, addLancamento, addAgendamento, addOrcamento,
+    addContaPagar, addServicoCatalogo,
+  } = useStore();
   const [officeName, setOfficeName] = useState('');
   const [officePhone, setOfficePhone] = useState('');
   const [officeAddress, setOfficeAddress] = useState('');
@@ -146,36 +150,134 @@ export default function ConfiguracoesPage() {
     if (importFileRef.current) importFileRef.current.value = '';
   }
 
-  function handleConfirmImport() {
-    // Verify password (financeiro password or default admin123)
+  async function handleConfirmImport() {
     const savedSenha = localStorage.getItem('autoflow-financeiro-senha') || 'admin123';
     if (importSenha !== savedSenha) {
       setImportSenhaError('Senha incorreta. Use a senha do Financeiro.');
       return;
     }
     if (!pendingImportData) return;
-    const keyMap: Record<string, string> = {
-      clientes: 'autoflow-clientes',
-      veiculos: 'autoflow-veiculos',
-      ordens: 'autoflow-ordens',
-      pecas: 'autoflow-pecas',
-      lancamentos: 'autoflow-lancamentos',
-      agendamentos: 'autoflow-agendamentos',
-      orcamentos: 'autoflow-orcamentos',
-      contasPagar: 'autoflow-contas-pagar',
-      servicosCatalogo: 'autoflow-servicos-catalogo',
-      lancamentosCaixa: 'autoflow-lancamentos-caixa',
-    };
-    Object.entries(keyMap).forEach(([key, lsKey]) => {
-      if (pendingImportData[key] !== undefined) {
-        localStorage.setItem(lsKey, JSON.stringify(pendingImportData[key]));
-      }
-    });
-    setShowImportConfirm(false);
-    setPendingImportData(null);
+
     setImportSenha('');
-    toast.success('Backup restaurado com sucesso! Recarregando...');
-    setTimeout(() => window.location.reload(), 1500);
+    setShowImportConfirm(false);
+    toast.loading('Importando dados... Aguarde.', { id: 'import-progress' });
+
+    try {
+      const counts = { clientes: 0, veiculos: 0, ordens: 0, pecas: 0, lancamentos: 0, agendamentos: 0, orcamentos: 0, contasPagar: 0, servicos: 0 };
+
+      // Import clientes
+      if (Array.isArray(pendingImportData.clientes)) {
+        for (const c of pendingImportData.clientes) {
+          try {
+            await addCliente({
+              nome: c.nome || '',
+              telefone: c.telefone || '',
+              whatsapp: c.whatsapp || '',
+              cpfCnpj: c.cpfCnpj || '',
+              email: c.email || '',
+              endereco: c.endereco || '',
+              observacoes: c.observacoes || '',
+            });
+            counts.clientes++;
+          } catch {}
+        }
+      }
+
+      // Import veiculos
+      if (Array.isArray(pendingImportData.veiculos)) {
+        for (const v of pendingImportData.veiculos) {
+          try {
+            await addVeiculo({
+              clienteId: v.clienteId || '',
+              marca: v.marca || '',
+              modelo: v.modelo || '',
+              ano: v.ano || new Date().getFullYear(),
+              placa: v.placa || '',
+              cor: v.cor || '',
+              quilometragem: v.quilometragem || 0,
+              observacoes: v.observacoes || '',
+            });
+            counts.veiculos++;
+          } catch {}
+        }
+      }
+
+      // Import pecas (stock)
+      if (Array.isArray(pendingImportData.pecas)) {
+        for (const p of pendingImportData.pecas) {
+          try {
+            await addPeca({
+              nome: p.nome || '',
+              quantidade: p.quantidade || 0,
+              quantidadeMinima: p.quantidadeMinima || 0,
+              custo: p.custo || 0,
+              fornecedor: p.fornecedor || undefined,
+              codigo: p.codigo || undefined,
+              marcaVeiculo: p.marcaVeiculo || undefined,
+              modeloVeiculo: p.modeloVeiculo || undefined,
+            });
+            counts.pecas++;
+          } catch {}
+        }
+      }
+
+      // Import lancamentos
+      if (Array.isArray(pendingImportData.lancamentos)) {
+        for (const l of pendingImportData.lancamentos) {
+          try {
+            await addLancamento({
+              tipo: l.tipo || 'entrada',
+              descricao: l.descricao || '',
+              valor: l.valor || 0,
+              data: l.data || new Date().toISOString().split('T')[0],
+              pago: l.pago ?? true,
+            });
+            counts.lancamentos++;
+          } catch {}
+        }
+      }
+
+      // Import agendamentos
+      if (Array.isArray(pendingImportData.agendamentos)) {
+        for (const a of pendingImportData.agendamentos) {
+          try {
+            await addAgendamento({
+              clienteId: a.clienteId || '',
+              veiculoId: a.veiculoId || '',
+              servico: a.servico || '',
+              data: a.data || new Date().toISOString().split('T')[0],
+              hora: a.hora || '08:00',
+              status: a.status || 'agendado',
+              observacoes: a.observacoes || undefined,
+            });
+            counts.agendamentos++;
+          } catch {}
+        }
+      }
+
+      // Import servicos catalogo
+      if (Array.isArray(pendingImportData.servicosCatalogo)) {
+        for (const s of pendingImportData.servicosCatalogo) {
+          try {
+            await addServicoCatalogo({
+              nome: s.nome || '',
+              descricao: s.descricao || undefined,
+              valorPadrao: s.valorPadrao || 0,
+              categoria: s.categoria || undefined,
+            });
+            counts.servicos++;
+          } catch {}
+        }
+      }
+
+      toast.dismiss('import-progress');
+      toast.success(`Importação concluída! Clientes: ${counts.clientes}, Veículos: ${counts.veiculos}, Peças: ${counts.pecas}, Lançamentos: ${counts.lancamentos}`);
+      setPendingImportData(null);
+    } catch (err) {
+      toast.dismiss('import-progress');
+      toast.error('Erro durante a importação. Alguns dados podem não ter sido importados.');
+      console.error(err);
+    }
   }
 
   // Senha

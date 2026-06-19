@@ -84,6 +84,7 @@ export default function OrdemDetailPage() {
       status: 'entregue',
       pagamento,
       dataConclusao: new Date().toISOString(),
+      valorTotal: totalFormas,  // discounted total goes to financeiro
       ...(descObs ? { observacoesInternas: (ordem?.observacoesInternas ? ordem.observacoesInternas + '\n' : '') + descObs } : {}),
     });
     setShowPaymentModal(false);
@@ -195,6 +196,10 @@ export default function OrdemDetailPage() {
 <div class="section-title">Problema Relatado</div>
 <div class="problem-box">${ordem!.problemaRelatado}</div>
 
+${ordem!.descricaoServicoRealizado ? `
+<div class="section-title">Descrição do Serviço Realizado</div>
+<p style="font-size:13px;line-height:1.6;color:#374151;padding:8px 0;border-bottom:1px solid #e5e7eb;margin-bottom:16px">${ordem!.descricaoServicoRealizado.replace(/\n/g, '<br>')}</p>` : ''}
+
 ${ordem!.servicos.length > 0 ? `
 <div class="section-title">Serviços Executados</div>
 <table>
@@ -222,7 +227,11 @@ ${ordem!.pecas.length > 0 ? `
 <div class="total-section" style="margin-top:20px">
   <div class="total-row alt"><span>Mão de obra</span><span>R$ ${ordem!.valorMaoDeObra.toFixed(2).replace('.', ',')}</span></div>
   <div class="total-row"><span>Peças</span><span>R$ ${ordem!.valorPecas.toFixed(2).replace('.', ',')}</span></div>
-  <div class="total-row final"><span>TOTAL</span><span>R$ ${ordem!.valorTotal.toFixed(2).replace('.', ',')}</span></div>
+  ${ordem!.pagamento && ordem!.pagamento.total < ordem!.valorTotal 
+    ? `<div class="total-row"><span>Total sem desconto</span><span>R$ ${(ordem!.valorTotal).toFixed(2).replace('.', ',')}</span></div>
+       <div class="total-row final" style="color:#16a34a;font-size:1.15em"><span>TOTAL (com desconto PIX)</span><span>R$ ${(ordem!.pagamento.total).toFixed(2).replace('.', ',')}</span></div>`
+    : `<div class="total-row final"><span>TOTAL</span><span>R$ ${(ordem!.pagamento?.total ?? ordem!.valorTotal).toFixed(2).replace('.', ',')}</span></div>`
+  }
 </div>
 
 <div class="signatures">
@@ -393,10 +402,10 @@ ${ordem!.pecas.length > 0 ? `
         )}
       </div>
 
-      {(ordem as any).descricaoServicoRealizado && (
+      {ordem.descricaoServicoRealizado && (
         <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
           <h3 className="font-semibold text-[rgb(var(--foreground))] mb-2">Descrição do Serviço Realizado</h3>
-          <p className="text-sm text-[rgb(var(--muted-foreground))] leading-relaxed whitespace-pre-wrap">{(ordem as any).descricaoServicoRealizado}</p>
+          <p className="text-sm text-[rgb(var(--muted-foreground))] leading-relaxed whitespace-pre-wrap">{ordem.descricaoServicoRealizado}</p>
         </div>
       )}
 
@@ -434,7 +443,7 @@ ${ordem!.pecas.length > 0 ? `
               <div key={p.id} className="flex justify-between items-center py-2 border-b border-[rgb(var(--card-border))] last:border-0">
                 <div>
                   <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
-                  <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">x{p.quantidade} × {formatCurrency(p.valorUnitario)}</span>
+                  <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">x{p.quantidade}</span>
                 </div>
                 <span className="text-sm font-medium text-[rgb(var(--foreground))]">{formatCurrency(p.valorTotal)}</span>
               </div>
