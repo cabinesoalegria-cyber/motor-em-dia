@@ -7,12 +7,49 @@ import { ServicoOS, PecaOS } from '@/lib/types';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
 import {
   ArrowLeft, Plus, Trash2, Save, Wrench, Package, FileText,
-  CalendarClock, ChevronUp, X
+  CalendarClock, ChevronUp, X, Pencil, Check, User, Car
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-// ─── inputCn fora do componente ─────────────────────────────────────────
+// ─── Rounding rule: frac < 0.51 → floor, >= 0.51 → ceil ─────────────────────
+function roundPeca(val: number): number {
+  const frac = val - Math.floor(val);
+  return frac >= 0.51 ? Math.ceil(val) : Math.floor(val);
+}
+
+// ─── SectionCard (same as Nova OS) ──────────────────────────────────────────
+function SectionCard({
+  title, icon: Icon, color = 'orange', children
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color?: 'blue' | 'orange' | 'red' | 'green' | 'purple' | 'amber';
+  children: React.ReactNode;
+}) {
+  const colorMap = {
+    blue:   { border: 'border-l-blue-500',    bg: 'bg-blue-500/10',    text: 'text-blue-500',    header: 'bg-blue-500/5' },
+    orange: { border: 'border-l-orange-500',  bg: 'bg-orange-500/10',  text: 'text-orange-500',  header: 'bg-orange-500/5' },
+    red:    { border: 'border-l-red-500',     bg: 'bg-red-500/10',     text: 'text-red-500',     header: 'bg-red-500/5' },
+    green:  { border: 'border-l-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-500', header: 'bg-emerald-500/5' },
+    purple: { border: 'border-l-purple-500',  bg: 'bg-purple-500/10',  text: 'text-purple-500',  header: 'bg-purple-500/5' },
+    amber:  { border: 'border-l-amber-500',   bg: 'bg-amber-500/10',   text: 'text-amber-500',   header: 'bg-amber-500/5' },
+  };
+  const c = colorMap[color];
+  return (
+    <div className={cn('rounded-2xl border-l-4 border border-[rgb(var(--card-border))]', c.border, 'bg-[rgb(var(--card))]')}>
+      <div className={cn('flex items-center gap-2.5 px-5 py-3.5 rounded-tl-xl rounded-tr-xl', c.header)}>
+        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', c.bg)}>
+          <Icon className={cn('w-4 h-4', c.text)} />
+        </div>
+        <h3 className={cn('font-semibold text-sm', c.text)}>{title}</h3>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  );
+}
+
+// ─── inputCn ─────────────────────────────────────────────────────────────────
 const inputCn = cn(
   'w-full px-3 py-2.5 rounded-xl text-sm border',
   'bg-[rgb(var(--input-bg))] border-[rgb(var(--input-border))]',
@@ -20,13 +57,7 @@ const inputCn = cn(
   'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-colors'
 );
 
-// ─── Rounding: frac >= 0.51 → ceil, else floor ───────────────────────────
-function roundPeca(val: number): number {
-  const frac = val - Math.floor(val);
-  return frac >= 0.51 ? Math.ceil(val) : Math.floor(val);
-}
-
-// ─── Linha de Serviço editável (fora do main component) ─────────────────
+// ─── ServicoEditRow (same as Nova OS ServicoRow) ─────────────────────────────
 function ServicoEditRow({
   servico,
   onUpdate,
@@ -38,58 +69,98 @@ function ServicoEditRow({
   onRemove: (id: string) => void;
   kmAtual: number;
 }) {
-  const [showRev, setShowRev] = useState(!!(servico.proximaRevisaoKm || servico.proximaRevisaoData));
+  const [showRevisao, setShowRevisao] = useState(!!(servico.proximaRevisaoKm || servico.proximaRevisaoData));
+  const [editing, setEditing] = useState(false);
+  const [editDesc, setEditDesc] = useState(servico.descricao);
+  const [editVal, setEditVal] = useState(String(servico.valor));
+
+  function saveEdit() {
+    onUpdate(servico.id, { descricao: editDesc.trim() || servico.descricao, valor: Number(editVal) || 0 });
+    setEditing(false);
+  }
+
   return (
     <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <input
-          type="text"
-          value={servico.descricao}
-          onChange={e => onUpdate(servico.id, { descricao: e.target.value })}
-          className={cn(inputCn, 'flex-1 bg-transparent border-transparent focus:bg-[rgb(var(--input-bg))] focus:border-orange-500')}
-          placeholder="Descrição do serviço"
-        />
-        <input
-          type="number"
-          value={servico.valor || ''}
-          onChange={e => onUpdate(servico.id, { valor: Number(e.target.value) })}
-          className={cn(inputCn, 'w-24 flex-shrink-0 text-right')}
-          placeholder="R$"
-          min="0" step="0.01"
-        />
-        <button
-          type="button"
-          onClick={() => setShowRev(v => !v)}
-          className={cn(
-            'p-1.5 rounded-lg transition-colors flex-shrink-0',
-            showRev ? 'bg-purple-500/15 text-purple-500' : 'text-[rgb(var(--muted-foreground))] hover:bg-purple-500/10 hover:text-purple-500'
-          )}
-          title="Próxima revisão deste serviço"
-        >
-          <CalendarClock className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onRemove(servico.id)}
-          className="p-1.5 text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors flex-shrink-0"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-      {showRev && (
+      {editing ? (
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <input
+            autoFocus
+            value={editDesc}
+            onChange={e => setEditDesc(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            className={cn(inputCn, 'flex-1 text-sm py-1.5')}
+            placeholder="Descrição do serviço"
+          />
+          <input
+            type="number"
+            value={editVal}
+            onChange={e => setEditVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            className={cn(inputCn, 'w-24 text-sm py-1.5')}
+            min="0" step="0.01"
+          />
+          <button type="button" onClick={saveEdit} className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 flex-shrink-0">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="p-1.5 rounded-lg border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:text-red-500 flex-shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <span className="flex-1 text-sm text-[rgb(var(--foreground))] font-medium">{servico.descricao}</span>
+          <span className="text-sm font-semibold text-orange-500 flex-shrink-0">{formatCurrency(servico.valor)}</span>
+          <button
+            type="button"
+            onClick={() => { setEditDesc(servico.descricao); setEditVal(String(servico.valor)); setEditing(true); }}
+            className="p-1 text-[rgb(var(--muted-foreground))] hover:text-blue-500 transition-colors"
+            title="Editar serviço"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRevisao(v => !v)}
+            className={cn(
+              'p-1 rounded-lg transition-colors text-xs flex items-center gap-1 flex-shrink-0',
+              showRevisao
+                ? 'bg-purple-500/15 text-purple-500'
+                : 'text-[rgb(var(--muted-foreground))] hover:bg-purple-500/10 hover:text-purple-500'
+            )}
+            title="Definir próxima revisão para este serviço"
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            <ChevronUp className={cn('w-3 h-3 transition-transform', !showRevisao && 'rotate-180')} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(servico.id)}
+            className="p-1 text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {!editing && showRevisao && (
         <div className="px-3 pb-3 pt-0 border-t border-purple-500/15 bg-purple-500/5">
-          <p className="text-xs text-purple-500 font-medium mt-2 mb-2">Próxima revisão — {servico.descricao}</p>
+          <p className="text-xs text-purple-500 font-medium mt-2 mb-2">
+            Próxima revisão — {servico.descricao}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">
-                KM {kmAtual > 0 && <span className="text-purple-500">(atual: {kmAtual.toLocaleString('pt-BR')})</span>}
+                KM
+                {kmAtual > 0 && (
+                  <span className="text-purple-500 ml-1">(atual: {kmAtual.toLocaleString('pt-BR')})</span>
+                )}
               </label>
               <input
                 type="number"
+                placeholder="Ex: 55000"
                 value={servico.proximaRevisaoKm ?? ''}
                 onChange={e => onUpdate(servico.id, { proximaRevisaoKm: e.target.value ? Number(e.target.value) : undefined })}
                 className={inputCn}
-                placeholder="Ex: 55000"
                 min="0"
               />
             </div>
@@ -103,13 +174,20 @@ function ServicoEditRow({
               />
             </div>
           </div>
+          {(servico.proximaRevisaoKm || servico.proximaRevisaoData) && (
+            <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 bg-purple-500/10 rounded-lg px-3 py-1.5">
+              {servico.proximaRevisaoKm && <span>Retornar em <strong>{servico.proximaRevisaoKm.toLocaleString('pt-BR')} km</strong></span>}
+              {servico.proximaRevisaoKm && servico.proximaRevisaoData && <span className="mx-2">·</span>}
+              {servico.proximaRevisaoData && <span>ou em <strong>{new Date(servico.proximaRevisaoData + 'T12:00:00').toLocaleDateString('pt-BR')}</strong></span>}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Main component ──────────────────────────────────────────────────────
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function EditarOrdemPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -125,6 +203,10 @@ export default function EditarOrdemPage() {
   const [descricaoRealizado, setDescricaoRealizado] = useState((ordem as any)?.descricaoServicoRealizado || '');
   const [observacoes, setObservacoes] = useState(ordem?.observacoesInternas || '');
   const [quilometragem, setQuilometragem] = useState(String(ordem?.quilometragemAtual || ''));
+  const [mecanico, setMecanico] = useState(ordem?.mecanico || '');
+  const [mecanicosLista] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('autoflow-mecanicos') || '[]'); } catch { return []; }
+  });
 
   // Add service inputs
   const [novoServico, setNovoServico] = useState('');
@@ -136,10 +218,17 @@ export default function EditarOrdemPage() {
   const [novaPeca, setNovaPeca] = useState('');
   const [novaPecaQtd, setNovaPecaQtd] = useState('1');
   const [novaPecaValor, setNovaPecaValor] = useState('');
+  const [novaPecaMarkup, setNovaPecaMarkup] = useState('0');
   const [showPecaSuggestions, setShowPecaSuggestions] = useState(false);
   const pecaInputRef = useRef<HTMLInputElement>(null);
 
-  // Busca expandida para serviços
+  // Inline piece edit state
+  const [editingPecaId, setEditingPecaId] = useState<string | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editQtd, setEditQtd] = useState('1');
+  const [editValor, setEditValor] = useState('');
+  const [editMarkup, setEditMarkup] = useState('0');
+
   const servicoSuggestions = (() => {
     const q = novoServico.toLowerCase().trim();
     if (!q) return servicosCatalogo.slice(0, 10);
@@ -150,7 +239,6 @@ export default function EditarOrdemPage() {
     ).slice(0, 10);
   })();
 
-  // Busca expandida para peças
   const pecaSuggestions = (() => {
     const q = novaPeca.toLowerCase().trim();
     if (!q) return stockPecas.slice(0, 10);
@@ -172,7 +260,6 @@ export default function EditarOrdemPage() {
     );
   }
 
-  // KM para revisão: prioriza valor digitado na OS
   const kmAtual = Number(quilometragem) || 0;
   const valorMaoDeObra = servicos.reduce((s, svc) => s + (svc.valor || 0), 0);
   const valorPecasTotal = pecasOS.reduce((s, p) => s + p.valorTotal, 0);
@@ -209,17 +296,21 @@ export default function EditarOrdemPage() {
     if (!novaPeca.trim() || !novaPecaValor) { toast.error('Informe nome e valor da peça'); return; }
     const qtd = Number(novaPecaQtd) || 1;
     const valUnit = Number(novaPecaValor);
-    const valorTotalRounded = roundPeca(qtd * valUnit);
+    const markup = Number(novaPecaMarkup) || 0;
+    const rawTotal = qtd * valUnit * (1 + markup / 100);
+    const valorTotalRounded = roundPeca(rawTotal);
     setPecasOS(prev => [...prev, {
       id: generateId(),
       nome: novaPeca,
       quantidade: qtd,
       valorUnitario: valUnit,
+      markup,
       valorTotal: valorTotalRounded,
     }]);
     setNovaPeca('');
     setNovaPecaQtd('1');
     setNovaPecaValor('');
+    setNovaPecaMarkup('0');
     setShowPecaSuggestions(false);
   }
 
@@ -230,6 +321,7 @@ export default function EditarOrdemPage() {
       problemaRelatado: problema,
       descricaoServicoRealizado: descricaoRealizado,
       observacoesInternas: observacoes,
+      mecanico,
       quilometragemAtual: Number(quilometragem) || ordem!.quilometragemAtual,
       valorMaoDeObra,
       valorPecas: valorPecasTotal,
@@ -252,28 +344,39 @@ export default function EditarOrdemPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Dados básicos */}
-        <div className={cn('rounded-2xl border-l-4 border-l-blue-500 bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] overflow-hidden')}>
-          <div className="bg-blue-500/5 px-5 py-3.5 flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-blue-500" />
+
+        {/* ─── CLIENTE INFO (readonly) ─── azul */}
+        <SectionCard title="Cliente e Veículo" icon={User} color="blue">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mb-0.5">Cliente</p>
+              <p className="font-semibold text-[rgb(var(--foreground))]">{cliente?.nome || '—'}</p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">{cliente?.telefone}</p>
             </div>
-            <h3 className="text-sm font-semibold text-blue-500">Dados Gerais</h3>
+            <div>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mb-0.5">Veículo</p>
+              <p className="font-semibold text-[rgb(var(--foreground))]">{veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '—'}</p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">{veiculo?.placa} · {quilometragem} km</p>
+            </div>
           </div>
-          <div className="px-5 py-4 space-y-3">
+          <div className="mt-3">
+            <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">KM Atual</label>
+            <input
+              type="number"
+              value={quilometragem}
+              onChange={e => setQuilometragem(e.target.value)}
+              className={inputCn}
+              placeholder={String(veiculo?.quilometragem || 0)}
+              min="0"
+            />
+          </div>
+        </SectionCard>
+
+        {/* ─── PROBLEMA RELATADO ─── vermelho */}
+        <SectionCard title="Problema Relatado" icon={FileText} color="red">
+          <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">KM Atual</label>
-              <input
-                type="number"
-                value={quilometragem}
-                onChange={e => setQuilometragem(e.target.value)}
-                className={inputCn}
-                placeholder={String(veiculo?.quilometragem || 0)}
-                min="0"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Problema Relatado</label>
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Problema</label>
               <textarea
                 value={problema}
                 onChange={e => setProblema(e.target.value)}
@@ -282,14 +385,18 @@ export default function EditarOrdemPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Descrição do Serviço Realizado</label>
-              <textarea
-                value={descricaoRealizado}
-                onChange={e => setDescricaoRealizado(e.target.value)}
-                className={cn(inputCn, 'resize-none')}
-                rows={4}
-                placeholder="Descreva detalhadamente o que foi feito, peças trocadas, ajustes realizados..."
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Mecânico Responsável 🔒</label>
+              <input
+                list="mecanicos-list-edit"
+                type="text"
+                value={mecanico}
+                onChange={e => setMecanico(e.target.value)}
+                placeholder="Nome do mecânico responsável..."
+                className={inputCn}
               />
+              <datalist id="mecanicos-list-edit">
+                {mecanicosLista.map(m => <option key={m} value={m} />)}
+              </datalist>
             </div>
             <div>
               <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Observações Internas 🔒</label>
@@ -298,20 +405,33 @@ export default function EditarOrdemPage() {
                 onChange={e => setObservacoes(e.target.value)}
                 className={cn(inputCn, 'resize-none')}
                 rows={2}
+                placeholder="Anotações internas (não aparece para o cliente)..."
               />
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Serviços */}
-        <div className={cn('rounded-2xl border-l-4 border-l-orange-500 bg-[rgb(var(--card))] border border-[rgb(var(--card-border))]')}>
-          <div className="bg-orange-500/5 px-5 py-3.5 flex items-center gap-2.5 rounded-tl-xl rounded-tr-xl">
-            <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-orange-500" />
-            </div>
-            <h3 className="text-sm font-semibold text-orange-500">Serviços Executados</h3>
+        {/* ─── DESCRIÇÃO DO SERVIÇO REALIZADO ─── laranja */}
+        <SectionCard title="Descrição do Serviço Realizado" icon={FileText} color="orange">
+          <div>
+            <p className="text-xs text-[rgb(var(--muted-foreground))] mb-2">Descreva detalhadamente o que foi executado. Não substitui a lista de serviços acima.</p>
+            <textarea
+              value={descricaoRealizado}
+              onChange={e => setDescricaoRealizado(e.target.value)}
+              className={cn(inputCn, 'resize-none')}
+              rows={5}
+              placeholder="Ex: Troca de correia dentada, tensores e bomba d'água. Ajuste de válvulas. Verificação do sistema de arrefecimento..."
+            />
           </div>
-          <div className="px-5 py-4 space-y-3">
+        </SectionCard>
+
+        {/* ─── SERVIÇOS EXECUTADOS ─── laranja */}
+        <SectionCard title="Serviços Executados" icon={Wrench} color="orange">
+          <div className="space-y-3">
+            <p className="text-xs text-[rgb(var(--muted-foreground))] -mt-1 mb-1">
+              Clique em <CalendarClock className="w-3 h-3 inline text-purple-500 mx-0.5" /> em cada serviço para definir a próxima revisão individualmente.
+            </p>
+
             {servicos.map(s => (
               <ServicoEditRow
                 key={s.id}
@@ -342,9 +462,7 @@ export default function EditarOrdemPage() {
                     style={{ backgroundColor: 'rgb(var(--card))' }}
                   >
                     {servicosCatalogo.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">
-                        Nenhum serviço no catálogo. Cadastre em <strong>Serviços</strong>.
-                      </p>
+                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">Nenhum serviço no catálogo. Cadastre em <strong>Serviços</strong>.</p>
                     ) : (
                       <div className="max-h-48 overflow-y-auto">
                         {servicoSuggestions.map(s => (
@@ -393,35 +511,122 @@ export default function EditarOrdemPage() {
               </div>
             )}
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Peças */}
-        <div className={cn('rounded-2xl border-l-4 border-l-emerald-500 bg-[rgb(var(--card))] border border-[rgb(var(--card-border))]')}>
-          <div className="bg-emerald-500/5 px-5 py-3.5 flex items-center gap-2.5 rounded-tl-xl rounded-tr-xl">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Package className="w-4 h-4 text-emerald-500" />
-            </div>
-            <h3 className="text-sm font-semibold text-emerald-500">Peças Utilizadas</h3>
-          </div>
-          <div className="px-5 py-4 space-y-3">
+        {/* ─── PEÇAS UTILIZADAS ─── verde com markup + inline edit */}
+        <SectionCard title="Peças Utilizadas" icon={Package} color="green">
+          <div className="space-y-3">
             {pecasOS.map(p => (
-              <div key={p.id} className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
-                  <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">x{p.quantidade} × {formatCurrency(p.valorUnitario)}</span>
-                </div>
-                <span className="text-sm font-semibold text-emerald-500 flex-shrink-0">{formatCurrency(p.valorTotal)}</span>
-                <button
-                  type="button"
-                  onClick={() => setPecasOS(prev => prev.filter(x => x.id !== p.id))}
-                  className="p-1 text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div key={p.id}>
+                {editingPecaId === p.id ? (
+                  <div className="flex flex-col gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
+                    <input
+                      value={editNome}
+                      onChange={e => setEditNome(e.target.value)}
+                      placeholder="Nome"
+                      className={inputCn}
+                    />
+                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                      <input
+                        type="number"
+                        value={editQtd}
+                        onChange={e => setEditQtd(e.target.value)}
+                        placeholder="Qtd"
+                        className={cn(inputCn, 'w-20')}
+                        min="1"
+                      />
+                      <input
+                        type="number"
+                        value={editValor}
+                        onChange={e => setEditValor(e.target.value)}
+                        placeholder="R$ unit."
+                        className={cn(inputCn, 'w-28')}
+                        min="0"
+                        step="0.01"
+                      />
+                      <div className="relative w-24 flex-shrink-0">
+                        <input
+                          type="number"
+                          value={editMarkup}
+                          onChange={e => setEditMarkup(e.target.value)}
+                          placeholder="%"
+                          className={cn(inputCn, 'pr-6')}
+                          min="0"
+                          step="1"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--muted-foreground))]">%</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const qtd = Number(editQtd) || 1;
+                          const val = Number(editValor) || 0;
+                          const mk = Number(editMarkup) || 0;
+                          const rawTotal = qtd * val * (1 + mk / 100);
+                          const total = roundPeca(rawTotal);
+                          setPecasOS(prev => prev.map(x =>
+                            x.id === p.id
+                              ? { ...x, nome: editNome, quantidade: qtd, valorUnitario: val, markup: mk, valorTotal: total }
+                              : x
+                          ));
+                          setEditingPecaId(null);
+                        }}
+                        className="p-2 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 flex-shrink-0"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingPecaId(null)}
+                        className="p-2 rounded-xl border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:text-red-500 flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {Number(editMarkup) > 0 && (
+                      <p className="text-xs text-emerald-600">
+                        Valor c/ markup: {formatCurrency(roundPeca(Number(editQtd) * Number(editValor) * (1 + Number(editMarkup) / 100)))}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
+                      <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">
+                        x{p.quantidade}
+                      </span>
+                      {(p.markup ?? 0) > 0 && (
+                        <span className="text-xs ml-1 text-amber-500">(+{p.markup}%)</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-emerald-500 flex-shrink-0">{formatCurrency(p.valorTotal)}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPecaId(p.id);
+                        setEditNome(p.nome);
+                        setEditQtd(String(p.quantidade));
+                        setEditValor(String(p.valorUnitario));
+                        setEditMarkup(String(p.markup ?? 0));
+                      }}
+                      className="text-[rgb(var(--muted-foreground))] hover:text-blue-500 transition-colors p-1 flex-shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPecasOS(prev => prev.filter(x => x.id !== p.id))}
+                      className="text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors p-1 flex-shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
 
-            {/* Add peca with autocomplete */}
+            {/* Add piece with autocomplete */}
             <div className="flex gap-2 flex-wrap sm:flex-nowrap">
               <div className="flex-1 min-w-0 relative z-30">
                 <input
@@ -440,25 +645,33 @@ export default function EditarOrdemPage() {
                     style={{ backgroundColor: 'rgb(var(--card))' }}
                   >
                     {stockPecas.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">Nenhuma peça no estoque.</p>
+                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">Nenhuma peça no estoque. Cadastre em <strong>Estoque</strong>.</p>
                     ) : pecaSuggestions.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">Nenhuma peça encontrada</p>
+                      <p className="px-3 py-3 text-xs text-[rgb(var(--muted-foreground))]">Nenhuma peça encontrada com esse nome</p>
                     ) : (
                       <div className="max-h-52 overflow-y-auto">
-                        {pecaSuggestions.map(p => (
+                        {pecaSuggestions.map(pk => (
                           <button
-                            key={p.id}
+                            key={pk.id}
                             type="button"
                             onMouseDown={e => {
                               e.preventDefault();
-                              setNovaPeca(p.nome);
-                              setNovaPecaValor(String(p.custo));
+                              setNovaPeca(pk.nome);
+                              setNovaPecaValor(String(pk.custo));
                               setShowPecaSuggestions(false);
                             }}
                             className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[rgb(var(--muted))] transition-colors text-left border-b border-[rgb(var(--card-border))] last:border-0"
                           >
-                            <span className="text-sm text-[rgb(var(--foreground))] truncate">{p.nome}</span>
-                            <span className="text-xs font-semibold text-emerald-500 ml-2">{formatCurrency(p.custo)}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm text-[rgb(var(--foreground))] block truncate">{pk.nome}</span>
+                              {pk.fornecedor && <span className="text-xs text-[rgb(var(--muted-foreground))]">{pk.fornecedor}</span>}
+                            </div>
+                            <div className="text-right ml-2 flex-shrink-0">
+                              <span className="text-xs font-semibold text-emerald-500 block">{formatCurrency(pk.custo)}</span>
+                              <span className={cn('text-xs', pk.quantidade <= pk.quantidadeMinima ? 'text-red-400' : 'text-[rgb(var(--muted-foreground))]')}>
+                                {pk.quantidade} un.
+                              </span>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -474,9 +687,21 @@ export default function EditarOrdemPage() {
                 className={cn(inputCn, 'w-16 flex-shrink-0')}
                 min="1"
               />
+              <div className="relative w-20 flex-shrink-0">
+                <input
+                  type="number"
+                  placeholder="%"
+                  value={novaPecaMarkup}
+                  onChange={e => setNovaPecaMarkup(e.target.value)}
+                  className={cn(inputCn, 'pr-5')}
+                  min="0"
+                  step="1"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--muted-foreground))]">%</span>
+              </div>
               <input
                 type="number"
-                placeholder="R$"
+                placeholder="R$ unit."
                 value={novaPecaValor}
                 onChange={e => setNovaPecaValor(e.target.value)}
                 className={cn(inputCn, 'w-28 flex-shrink-0')}
@@ -486,6 +711,7 @@ export default function EditarOrdemPage() {
                 type="button"
                 onClick={addPeca}
                 className="p-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex-shrink-0"
+                title="Adicionar peça"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -498,9 +724,9 @@ export default function EditarOrdemPage() {
               </div>
             )}
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Total e salvar */}
+        {/* ─── TOTAL E SALVAR ─── */}
         <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
           <div className="space-y-2 mb-4">
             <div className="flex justify-between text-sm">
@@ -518,6 +744,7 @@ export default function EditarOrdemPage() {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleSave}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors shadow-md shadow-orange-500/20 text-sm"
           >
@@ -525,6 +752,7 @@ export default function EditarOrdemPage() {
             Salvar Alterações
           </button>
         </div>
+
       </div>
     </div>
   );
