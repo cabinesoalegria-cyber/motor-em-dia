@@ -64,12 +64,14 @@ function mapOrdem(r: Row): OrdemServico {
     quilometragemAtual: r.quilometragem_atual || 0,
     problemaRelatado: r.problema_relatado || '',
     observacoesInternas: r.observacoes_internas || '',
+    mecanico: r.mecanico || undefined,
     servicos: r.servicos || [],
     pecas: r.pecas || [],
     valorMaoDeObra: r.valor_mao_de_obra || 0,
     valorPecas: r.valor_pecas || 0,
     valorTotal: r.valor_total || 0,
     status: r.status || 'em_andamento',
+    pagamento: r.pagamento || undefined,
     dataEntrada: r.data_entrada || r.created_at,
     dataConclusao: r.data_conclusao || undefined,
     lancamentoId: r.lancamento_id || undefined,
@@ -376,6 +378,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
       status: data.status,
       problema_relatado: data.problemaRelatado,
       observacoes_internas: data.observacoesInternas,
+      mecanico: data.mecanico || null,
       quilometragem_atual: data.quilometragemAtual,
       valor_mao_de_obra: data.valorMaoDeObra,
       valor_pecas: data.valorPecas,
@@ -384,6 +387,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
       pecas: data.pecas,
       data_entrada: data.dataEntrada,
       data_conclusao: data.dataConclusao || null,
+      pagamento: data.pagamento || null,
     }).select().single();
     if (error) throw error;
     const mapped = mapOrdem(row);
@@ -396,6 +400,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
     if (data.status !== undefined) payload.status = data.status;
     if (data.problemaRelatado !== undefined) payload.problema_relatado = data.problemaRelatado;
     if (data.observacoesInternas !== undefined) payload.observacoes_internas = data.observacoesInternas;
+    if (data.mecanico !== undefined) payload.mecanico = data.mecanico;
     if (data.quilometragemAtual !== undefined) payload.quilometragem_atual = data.quilometragemAtual;
     if (data.valorMaoDeObra !== undefined) payload.valor_mao_de_obra = data.valorMaoDeObra;
     if (data.valorPecas !== undefined) payload.valor_pecas = data.valorPecas;
@@ -406,6 +411,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
     if (data.veiculoId !== undefined) payload.veiculo_id = data.veiculoId;
     if (data.dataConclusao !== undefined) payload.data_conclusao = data.dataConclusao;
     if (data.lancamentoId !== undefined) payload.lancamento_id = data.lancamentoId;
+    if (data.pagamento !== undefined) payload.pagamento = data.pagamento;
 
     await supabase.from('ordens_servico').update(payload).eq('id', id).eq('empresa_id', empresaId!);
     setOrdens(prev => prev.map(o => o.id === id ? { ...o, ...data } : o));

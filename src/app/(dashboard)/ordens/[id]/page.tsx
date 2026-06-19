@@ -1,15 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel, buildWhatsAppLink, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, buildWhatsAppLink, cn, generateId } from '@/lib/utils';
 import {
   ArrowLeft, Printer, MessageSquare, CheckCircle,
   Car, User, Gauge, Wrench, Package, Pencil,
+  X, Plus, CreditCard, Banknote, Smartphone, CircleDollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { OrdemServico } from '@/lib/types';
+import type { FormaPagamento, PagamentoOS } from '@/lib/types';
 
 const STATUS_FLOW: { value: OrdemServico['status']; label: string }[] = [
   { value: 'aberta', label: 'Aberta' },
@@ -21,7 +24,11 @@ const STATUS_FLOW: { value: OrdemServico['status']; label: string }[] = [
 
 export default function OrdemDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { ordens, clientes, veiculos, updateOrdemStatus } = useStore();
+  const { ordens, clientes, veiculos, updateOrdemStatus, updateOrdem } = useStore();
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<OrdemServico['status'] | null>(null);
+  const [formas, setFormas] = useState<FormaPagamento[]>([]);
 
   const ordem = ordens.find((o) => o.id === id);
   const cliente = ordem ? clientes.find((c) => c.id === ordem.clienteId) : null;
@@ -37,14 +44,48 @@ export default function OrdemDetailPage() {
   }
 
   function handleStatusChange(status: OrdemServico['status']) {
-    updateOrdemStatus(id, status);
-    const label = getStatusLabel(status);
-    if (status === 'entregue') {
-      toast.success(`Status: ${label} — lançamento financeiro criado automaticamente! 💰`);
-    } else {
-      toast.success(`Status: ${label}`);
+    if (status === 'finalizada') {
+      // Open payment modal instead of saving immediately
+      setPendingStatus('finalizada');
+      setFormas([{ id: generateId(), tipo: 'pix', valor: ordem!.valorTotal }]);
+      setShowPaymentModal(true);
+      return;
     }
+    updateOrdemStatus(id, status);
+    toast.success(`Status: ${getStatusLabel(status)}`);
   }
+
+  function addForma() {
+    setFormas(prev => [...prev, { id: generateId(), tipo: 'pix', valor: 0 }]);
+  }
+
+  function removeForma(fId: string) {
+    setFormas(prev => prev.filter(f => f.id !== fId));
+  }
+
+  function updateForma(fId: string, patch: Partial<FormaPagamento>) {
+    setFormas(prev => prev.map(f => f.id === fId ? { ...f, ...patch } : f));
+  }
+
+  const totalFormas = formas.reduce((s, f) => s + (f.valor || 0), 0);
+  const valorOS = ordem?.valorTotal ?? 0;
+  const diffOk = Math.abs(totalFormas - valorOS) < 0.01;
+
+  async function confirmPayment() {
+    if (!diffOk) return;
+    const pagamento: PagamentoOS = {
+      formas,
+      total: totalFormas,
+      dataRegistro: new Date().toISOString(),
+    };
+    await updateOrdem(id, { status: 'finalizada', pagamento, dataConclusao: new Date().toISOString() });
+    setShowPaymentModal(false);
+    setFormas([]);
+    toast.success('OS finalizada! Forma de pagamento registrada. 💳');
+  }
+
+  // suppress unused warning — pendingStatus is reserved for future use
+  void pendingStatus;
 
   function handleWhatsApp() {
     if (!cliente) return;
@@ -409,6 +450,116 @@ ${ordem!.pecas.length > 0 ? `
           </div>
         </div>
       </div>
+
+      {/* ── MODAL DE PAGAMENTO ────────────────────────────────── */}
+      {showPaymentModal && ordem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] rounded-3xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-[rgb(var(--card-border))]">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-bold text-[rgb(var(--foreground))]">Forma de Pagamento</h2>
+                <p className="text-xs text-[rgb(var(--muted-foreground))]">OS {ordem.numero} · Total: {formatCurrency(valorOS)}</p>
+              </div>
+              <button onClick={() => setShowPaymentModal(false)} className="p-2 rounded-xl hover:bg-[rgb(var(--muted))] transition-colors">
+                <X className="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {formas.map((f, fi) => (
+                <div key={f.id} className="rounded-2xl border border-[rgb(var(--card-border))] p-4 space-y-3 bg-[rgb(var(--muted))]/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[rgb(var(--muted-foreground))] uppercase tracking-widest">Forma {fi + 1}</span>
+                    {formas.length > 1 && (
+                      <button type="button" onClick={() => removeForma(f.id)} className="text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tipo */}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {(['pix','dinheiro','debito','credito','outro'] as const).map(t => (
+                      <button key={t} type="button"
+                        onClick={() => updateForma(f.id, { tipo: t, parcelas: t === 'credito' ? 1 : undefined })}
+                        className={cn('flex flex-col items-center py-2.5 rounded-xl border-2 text-xs font-semibold transition-all gap-1',
+                          f.tipo === t ? 'border-emerald-400 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-emerald-400/40'
+                        )}>
+                        {t === 'pix' && <Smartphone className="w-4 h-4" />}
+                        {t === 'dinheiro' && <Banknote className="w-4 h-4" />}
+                        {t === 'debito' && <CreditCard className="w-4 h-4" />}
+                        {t === 'credito' && <CreditCard className="w-4 h-4" />}
+                        {t === 'outro' && <CircleDollarSign className="w-4 h-4" />}
+                        {t === 'pix' ? 'PIX' : t === 'dinheiro' ? 'Dinheiro' : t === 'debito' ? 'Débito' : t === 'credito' ? 'Crédito' : 'Outro'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Valor */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-[rgb(var(--muted-foreground))] mb-1 block">Valor (R$)</label>
+                      <input type="number" value={f.valor || ''} onChange={e => updateForma(f.id, { valor: Number(e.target.value) })}
+                        className="w-full px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-emerald-500/40" min="0" step="0.01" />
+                    </div>
+                    {f.tipo === 'credito' && (
+                      <div>
+                        <label className="text-xs text-[rgb(var(--muted-foreground))] mb-1 block">Parcelas</label>
+                        <select value={f.parcelas ?? 1} onChange={e => updateForma(f.id, { parcelas: Number(e.target.value) })}
+                          className="px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none">
+                          {[1,2,3,4,5,6,7,8,9,10,11,12,18,24].map(n => <option key={n} value={n}>{n}x</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Obs / Outro */}
+                  {(f.tipo === 'credito' || f.tipo === 'outro') && (
+                    <input type="text"
+                      value={f.tipo === 'outro' ? (f.descricaoOutro ?? '') : (f.obs ?? '')}
+                      onChange={e => updateForma(f.id, f.tipo === 'outro' ? { descricaoOutro: e.target.value } : { obs: e.target.value })}
+                      placeholder={f.tipo === 'credito' ? 'Observação (ex: Mastercard 1234)...' : 'Descreva a forma de pagamento...'}
+                      className="w-full px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+                  )}
+                </div>
+              ))}
+
+              {/* Add forma */}
+              <button type="button" onClick={addForma}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-[rgb(var(--card-border))] text-sm text-[rgb(var(--muted-foreground))] hover:border-emerald-400 hover:text-emerald-500 transition-colors">
+                <Plus className="w-4 h-4" /> Adicionar outra forma de pagamento
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 pt-2 border-t border-[rgb(var(--card-border))] space-y-3">
+              <div className={cn('flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold',
+                diffOk ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-500'
+              )}>
+                <span>Total informado</span>
+                <span>{formatCurrency(totalFormas)} {diffOk ? '✓' : `(faltam ${formatCurrency(valorOS - totalFormas)})`}</span>
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowPaymentModal(false)}
+                  className="flex-1 py-3 rounded-2xl border-2 border-[rgb(var(--card-border))] text-sm font-semibold text-[rgb(var(--foreground))] hover:border-orange-400 transition-colors">
+                  Cancelar
+                </button>
+                <button type="button" onClick={confirmPayment} disabled={!diffOk}
+                  className={cn('flex-1 py-3 rounded-2xl text-sm font-bold transition-all',
+                    diffOk ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-[rgb(var(--muted))] text-[rgb(var(--muted-foreground))] cursor-not-allowed'
+                  )}>
+                  Confirmar e Finalizar OS
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import { OrdemServico } from '@/lib/types';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn } from '@/lib/utils';
 import {
-  Search, Plus, X, ChevronDown, Wrench, ArrowRight, Car
+  Search, Plus, X, ChevronDown, Wrench, ArrowRight, Car, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -21,9 +21,10 @@ const STATUS_OPTIONS = [
 ];
 
 function OrdensPageInner() {
-  const { ordens, clientes, veiculos, updateOrdemStatus } = useStore();
+  const { ordens, clientes, veiculos, updateOrdemStatus, deleteOrdem } = useStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const filterClienteId = searchParams.get('clienteId');
   const initStatus = searchParams.get('status') || '';
@@ -86,6 +87,7 @@ function OrdensPageInner() {
   );
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-5">
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -206,10 +208,17 @@ function OrdensPageInner() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end mt-3 pt-3 border-t border-[rgb(var(--card-border))]">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgb(var(--card-border))]">
                   <Link href={`/ordens/${o.id}`} className="flex items-center gap-1 text-xs text-orange-500 hover:underline">
                     Ver detalhes <ArrowRight className="w-3 h-3" />
                   </Link>
+                  <button
+                    onClick={() => setDeleteConfirmId(o.id)}
+                    className="flex items-center gap-1 text-xs text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Excluir
+                  </button>
                 </div>
               </div>
             </div>
@@ -217,6 +226,40 @@ function OrdensPageInner() {
         )}
       </div>
     </div>
+
+    {/* Delete confirmation modal */}
+    {deleteConfirmId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="w-full max-w-sm bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] rounded-2xl p-6 shadow-2xl">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <Trash2 className="w-6 h-6 text-red-500" />
+          </div>
+          <h3 className="text-center font-bold text-[rgb(var(--foreground))] mb-2">Excluir Ordem de Serviço?</h3>
+          <p className="text-center text-sm text-[rgb(var(--muted-foreground))] mb-6">
+            Esta ação é permanente e não pode ser desfeita.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              className="flex-1 py-2.5 rounded-xl border-2 border-[rgb(var(--card-border))] text-sm font-semibold text-[rgb(var(--foreground))] hover:border-orange-400 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                await deleteOrdem(deleteConfirmId);
+                setDeleteConfirmId(null);
+                toast.success('OS excluída');
+              }}
+              className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-sm font-bold text-white transition-colors"
+            >
+              Excluir definitivamente
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

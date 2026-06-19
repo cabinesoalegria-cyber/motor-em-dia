@@ -219,8 +219,8 @@ export default function PlanosPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const nome = empresa?.nome;
 
-  const daysLeft = empresa?.trial_expira_em
-    ? Math.max(0, Math.ceil((new Date(empresa.trial_expira_em).getTime() - Date.now()) / 86400000))
+  const daysLeft = empresa?.trialExpiraEm
+    ? Math.max(0, Math.ceil((new Date(empresa.trialExpiraEm).getTime() - Date.now()) / 86400000))
     : null;
   const urgent = daysLeft !== null && daysLeft <= 5;
   const planoAtual = empresa?.plano ?? 'trial';

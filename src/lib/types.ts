@@ -63,7 +63,24 @@ export interface PecaOS {
   nome: string;
   quantidade: number;
   valorUnitario: number;
-  valorTotal: number;
+  markup?: number;        // % de markup (só interno, não aparece para o cliente)
+  valorTotal: number;    // já com markup aplicado
+}
+
+// Formas de pagamento ao finalizar OS
+export interface FormaPagamento {
+  id: string;
+  tipo: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'outro';
+  valor: number;
+  parcelas?: number;     // só para crédito
+  obs?: string;          // observação por cartão/forma
+  descricaoOutro?: string; // só para 'outro'
+}
+
+export interface PagamentoOS {
+  formas: FormaPagamento[];
+  total: number;
+  dataRegistro: string;
 }
 
 export interface OrdemServico {
@@ -74,15 +91,16 @@ export interface OrdemServico {
   quilometragemAtual: number;
   problemaRelatado: string;
   observacoesInternas?: string;
+  mecanico?: string;           // mecânico responsável (interno)
   servicos: ServicoOS[];
   pecas: PecaOS[];
   valorMaoDeObra: number;
   valorPecas: number;
   valorTotal: number;
   status: StatusOS;
+  pagamento?: PagamentoOS;     // preenchido ao finalizar
   dataEntrada: string;
   dataConclusao?: string;
-  // Lançamento automático já criado?
   lancamentoId?: string;
   createdAt: string;
   updatedAt: string;

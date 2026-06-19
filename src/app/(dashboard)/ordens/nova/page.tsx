@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { ServicoOS, PecaOS } from '@/lib/types';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
 import {
   ArrowLeft, Plus, Trash2, ChevronDown, Save,
-  User, Car, FileText, Wrench, Package, CalendarClock, ChevronUp
+  User, Car, FileText, Wrench, Package, CalendarClock, ChevronUp,
+  Pencil, Check, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -159,6 +160,13 @@ export default function NovaOrdemPage() {
   const [problema, setProblema] = useState('');
   const [observacoes, setObservacoes] = useState('');
 
+  // — Mecânico
+  const [mecanico, setMecanico] = useState('');
+  const [mecanicosLista, setMecanicosLista] = useState<string[]>([]);
+
+  // — Draft banner
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
   // — Serviços
   const [servicos, setServicos] = useState<ServicoOS[]>([]);
   const [novoServico, setNovoServico] = useState('');
@@ -171,12 +179,70 @@ export default function NovaOrdemPage() {
   const [novaPeca, setNovaPeca] = useState('');
   const [novaPecaQtd, setNovaPecaQtd] = useState('1');
   const [novaPecaValor, setNovaPecaValor] = useState('');
+  const [novaPecaMarkup, setNovaPecaMarkup] = useState('0');
   const [showPecaSuggestions, setShowPecaSuggestions] = useState(false);
   const pecaInputRef = useRef<HTMLInputElement>(null);
 
+  // — Peças: inline edit state
+  const [editingPecaId, setEditingPecaId] = useState<string | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editQtd, setEditQtd] = useState('1');
+  const [editValor, setEditValor] = useState('');
+  const [editMarkup, setEditMarkup] = useState('0');
+
+  // ─── Load mecânicos list + restore draft on mount ─────────────
+  useEffect(() => {
+    // Load mecânicos suggestions
+    try {
+      setMecanicosLista(JSON.parse(localStorage.getItem('autoflow-mecanicos') || '[]'));
+    } catch {}
+
+    // Restore draft
+    try {
+      const raw = localStorage.getItem('os_draft');
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.clienteId) setClienteId(draft.clienteId);
+        if (draft.veiculoId) setVeiculoId(draft.veiculoId);
+        if (draft.quilometragem) setQuilometragem(draft.quilometragem);
+        if (draft.status) setStatus(draft.status);
+        if (draft.problema) setProblema(draft.problema);
+        if (draft.observacoes) setObservacoes(draft.observacoes);
+        if (draft.mecanico) setMecanico(draft.mecanico);
+        if (Array.isArray(draft.servicos)) setServicos(draft.servicos);
+        if (Array.isArray(draft.pecasOS)) setPecasOS(draft.pecasOS);
+        setShowDraftBanner(true);
+      }
+    } catch {}
+  }, []);
+
+  // ─── Debounced auto-save draft ────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const hasContent = clienteId || veiculoId || problema || mecanico ||
+        servicos.length > 0 || pecasOS.length > 0;
+      if (hasContent) {
+        try {
+          localStorage.setItem('os_draft', JSON.stringify({
+            clienteId,
+            veiculoId,
+            quilometragem,
+            status,
+            problema,
+            observacoes,
+            mecanico,
+            servicos,
+            pecasOS,
+          }));
+        } catch {}
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clienteId, veiculoId, quilometragem, status, problema, observacoes, mecanico, servicos, pecasOS]);
+
+  // ─── Derived values ───────────────────────────────────────────
   const clienteVeiculos = veiculos.filter((v) => v.clienteId === clienteId);
   const veiculoSelecionado = veiculos.find(v => v.id === veiculoId);
-  // KM para cálculos de revisão: prioriza o valor digitado na OS
   const kmAtual = Number(quilometragem) || 0;
 
   const valorMaoDeObra = servicos.reduce((s, svc) => s + svc.valor, 0);
@@ -207,6 +273,7 @@ export default function NovaOrdemPage() {
     ).slice(0, 10);
   })();
 
+  // ─── Handlers ─────────────────────────────────────────────────
   function addServico() {
     if (!novoServico.trim()) return;
     setServicos(prev => [...prev, {
@@ -237,41 +304,65 @@ export default function NovaOrdemPage() {
     }
     const qtd = Number(novaPecaQtd) || 1;
     const valUnit = Number(novaPecaValor);
+    const markup = Number(novaPecaMarkup) || 0;
+    const valFinal = valUnit * (1 + markup / 100);
     setPecasOS(prev => [...prev, {
       id: generateId(),
       nome: novaPeca,
       quantidade: qtd,
       valorUnitario: valUnit,
-      valorTotal: qtd * valUnit,
+      markup,
+      valorTotal: qtd * valFinal,
     }]);
     setNovaPeca('');
     setNovaPecaQtd('1');
     setNovaPecaValor('');
+    setNovaPecaMarkup('0');
     setShowPecaSuggestions(false);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleDiscardDraft() {
+    localStorage.removeItem('os_draft');
+    setShowDraftBanner(false);
+    setClienteId('');
+    setVeiculoId('');
+    setQuilometragem('');
+    setStatus('aberta');
+    setProblema('');
+    setObservacoes('');
+    setMecanico('');
+    setServicos([]);
+    setPecasOS([]);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!clienteId || !veiculoId || !problema) {
       toast.error('Preencha os campos obrigatórios: cliente, veículo e problema');
       return;
     }
-    const id = addOrdem({
-      clienteId,
-      veiculoId,
-      quilometragemAtual: Number(quilometragem) || 0,
-      problemaRelatado: problema,
-      observacoesInternas: observacoes,
-      servicos,
-      pecas: pecasOS,
-      valorMaoDeObra,
-      valorPecas: valorPecasTotal,
-      valorTotal,
-      status,
-      dataEntrada: new Date().toISOString(),
-    });
-    toast.success('OS criada com sucesso!');
-    router.push(`/ordens/${id}`);
+    try {
+      const id = await addOrdem({
+        clienteId,
+        veiculoId,
+        quilometragemAtual: Number(quilometragem) || 0,
+        problemaRelatado: problema,
+        observacoesInternas: observacoes,
+        mecanico,
+        servicos,
+        pecas: pecasOS,
+        valorMaoDeObra,
+        valorPecas: valorPecasTotal,
+        valorTotal,
+        status,
+        dataEntrada: new Date().toISOString(),
+      });
+      localStorage.removeItem('os_draft');
+      toast.success('OS criada com sucesso!');
+      router.push(`/ordens/${id}`);
+    } catch {
+      toast.error('Erro ao salvar OS. Tente novamente.');
+    }
   }
 
   return (
@@ -280,6 +371,35 @@ export default function NovaOrdemPage() {
         <ArrowLeft className="w-4 h-4" />
         Voltar para OS
       </Link>
+
+      {/* ─── DRAFT BANNER ─── */}
+      {showDraftBanner && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📝</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Rascunho encontrado</p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))]">Deseja continuar de onde parou?</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDraftBanner(false)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+            >
+              Continuar
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:text-red-500 hover:border-red-400 transition-colors"
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -360,6 +480,20 @@ export default function NovaOrdemPage() {
                 rows={3}
                 placeholder="Descreva o problema relatado pelo cliente..."
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Mecânico Responsável 🔒</label>
+              <input
+                list="mecanicos-list"
+                type="text"
+                value={mecanico}
+                onChange={e => setMecanico(e.target.value)}
+                placeholder="Nome do mecânico responsável..."
+                className={inputCn}
+              />
+              <datalist id="mecanicos-list">
+                {mecanicosLista.map(m => <option key={m} value={m} />)}
+              </datalist>
             </div>
             <div>
               <label className="block text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide mb-1.5">Observações Internas 🔒</label>
@@ -465,16 +599,113 @@ export default function NovaOrdemPage() {
         <SectionCard title="Peças Utilizadas" icon={Package} color="green">
           <div className="space-y-3">
             {pecasOS.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
-                  <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">x{p.quantidade} × {formatCurrency(p.valorUnitario)}</span>
-                </div>
-                <span className="text-sm font-semibold text-emerald-500 flex-shrink-0">{formatCurrency(p.valorTotal)}</span>
-                <button type="button" onClick={() => setPecasOS(p2 => p2.filter(x => x.id !== p.id))}
-                  className="text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors p-1 flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div key={p.id}>
+                {editingPecaId === p.id ? (
+                  // ── Inline edit mode
+                  <div className="flex flex-col gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
+                    <input
+                      value={editNome}
+                      onChange={e => setEditNome(e.target.value)}
+                      placeholder="Nome"
+                      className={inputCn}
+                    />
+                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                      <input
+                        type="number"
+                        value={editQtd}
+                        onChange={e => setEditQtd(e.target.value)}
+                        placeholder="Qtd"
+                        className={cn(inputCn, 'w-20')}
+                        min="1"
+                      />
+                      <input
+                        type="number"
+                        value={editValor}
+                        onChange={e => setEditValor(e.target.value)}
+                        placeholder="R$ unit."
+                        className={cn(inputCn, 'w-28')}
+                        min="0"
+                        step="0.01"
+                      />
+                      <div className="relative w-24 flex-shrink-0">
+                        <input
+                          type="number"
+                          value={editMarkup}
+                          onChange={e => setEditMarkup(e.target.value)}
+                          placeholder="%"
+                          className={cn(inputCn, 'pr-6')}
+                          min="0"
+                          step="1"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--muted-foreground))]">%</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const qtd = Number(editQtd) || 1;
+                          const val = Number(editValor) || 0;
+                          const mk = Number(editMarkup) || 0;
+                          const total = qtd * val * (1 + mk / 100);
+                          setPecasOS(prev => prev.map(x =>
+                            x.id === p.id
+                              ? { ...x, nome: editNome, quantidade: qtd, valorUnitario: val, markup: mk, valorTotal: total }
+                              : x
+                          ));
+                          setEditingPecaId(null);
+                        }}
+                        className="p-2 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 flex-shrink-0"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingPecaId(null)}
+                        className="p-2 rounded-xl border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:text-red-500 flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {Number(editMarkup) > 0 && (
+                      <p className="text-xs text-emerald-600">
+                        Valor c/ markup: {formatCurrency(Number(editQtd) * Number(editValor) * (1 + Number(editMarkup) / 100))}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  // ── Normal view
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
+                      <span className="text-xs text-[rgb(var(--muted-foreground))] ml-2">
+                        x{p.quantidade} × {formatCurrency(p.valorUnitario)}
+                      </span>
+                      {(p.markup ?? 0) > 0 && (
+                        <span className="text-xs ml-1 text-amber-500">(+{p.markup}%)</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-emerald-500 flex-shrink-0">{formatCurrency(p.valorTotal)}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPecaId(p.id);
+                        setEditNome(p.nome);
+                        setEditQtd(String(p.quantidade));
+                        setEditValor(String(p.valorUnitario));
+                        setEditMarkup(String(p.markup ?? 0));
+                      }}
+                      className="text-[rgb(var(--muted-foreground))] hover:text-blue-500 transition-colors p-1 flex-shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPecasOS(p2 => p2.filter(x => x.id !== p.id))}
+                      className="text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors p-1 flex-shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -533,6 +764,18 @@ export default function NovaOrdemPage() {
                 className={cn(inputCn, 'w-16 flex-shrink-0')}
                 min="1"
               />
+              <div className="relative w-20 flex-shrink-0">
+                <input
+                  type="number"
+                  placeholder="%"
+                  value={novaPecaMarkup}
+                  onChange={e => setNovaPecaMarkup(e.target.value)}
+                  className={cn(inputCn, 'pr-5')}
+                  min="0"
+                  step="1"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--muted-foreground))]">%</span>
+              </div>
               <input
                 type="number"
                 placeholder="R$ unit."

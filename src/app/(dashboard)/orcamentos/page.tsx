@@ -207,6 +207,10 @@ export default function OrcamentosPage() {
 
 ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observacoes}</div>` : ''}
 
+<div style="margin: 16px 0; padding: 10px 14px; background: #fff8e1; border: 1.5px solid #f59e0b; border-radius: 8px; font-size: 13px; color: #92400e; font-weight: 600;">
+  ⚠️ Obs: ORÇAMENTO SUJEITO A ALTERAÇÕES!
+</div>
+
 <div class="approval-box">
   <div class="approval-title">✅ Aprovação do Orçamento</div>
   <p style="font-size:13px;color:#555;margin:0">
@@ -246,7 +250,7 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
   function handleSendWhatsApp(o: typeof orcamentosComDetalhes[0]) {
     if (!o.cliente) return;
     const officeName = localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
-    const msg = `Olá ${o.cliente.nome}! 📋\n\nSegue o *Orçamento ${o.numero}* da ${officeName}:\n\n${o.itens.map(i => `• ${i.descricao}: *R$ ${i.valorTotal.toFixed(2).replace('.', ',')}*`).join('\n')}\n\n*Total: R$ ${o.valorTotal.toFixed(2).replace('.', ',')}*\n\n_Válido até ${new Date(o.validade + 'T12:00:00').toLocaleDateString('pt-BR')}_\n\nResponda *SIM* para aprovar ou *NÃO* para recusar.\n\n_${officeName}_`;
+    const msg = `Olá ${o.cliente.nome}! 📋\n\nSegue o *Orçamento ${o.numero}* da ${officeName}:\n\n${o.itens.map(i => `• ${i.descricao}: *R$ ${i.valorTotal.toFixed(2).replace('.', ',')}*`).join('\n')}\n\n*Total: R$ ${o.valorTotal.toFixed(2).replace('.', ',')}*\n\n_Válido até ${new Date(o.validade + 'T12:00:00').toLocaleDateString('pt-BR')}_\n\nResponda *SIM* para aprovar ou *NÃO* para recusar.\n\n⚠️ Obs: ORÇAMENTO SUJEITO A ALTERAÇÕES!\n\n_${officeName}_`;
     window.open(`https://wa.me/55${o.cliente.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
