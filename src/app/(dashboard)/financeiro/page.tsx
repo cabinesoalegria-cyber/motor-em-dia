@@ -2,12 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/lib/store';
-import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn } from '@/lib/utils';
 import { ContaPagar, Lancamento } from '@/lib/types';
 import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Plus, Trash2,
   Lock, Eye, EyeOff, ArrowRight, ShieldCheck, LogOut, Pencil, CheckCircle2,
-  X, Save, Clock, History
+  X, Save, Clock, History, BarChart2, FileSpreadsheet, Download, SlidersHorizontal,
+  Filter, Users,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -156,15 +157,224 @@ function EditLancamentoModal({
   );
 }
 
+// ─── Relatórios Tab ──────────────────────────────────────────────────────
+function RelatoriosTab() {
+  const { ordens, clientes, veiculos } = useStore();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+
+  const [dataInicio, setDataInicio] = useState(firstOfMonth);
+  const [dataFim,    setDataFim]    = useState(todayStr);
+  const [mecanicoSel, setMecanicoSel] = useState('todos');
+  const [percentagem, setPercentagem] = useState(40);
+
+  const mecanicosDisponiveis = useMemo(() => {
+    const s = new Set<string>();
+    ordens.forEach(o => { if (o.mecanico?.trim()) s.add(o.mecanico.trim()); });
+    return [...s].sort();
+  }, [ordens]);
+
+  const ordensNoPeriodo = useMemo(() => {
+    const from = new Date(dataInicio + 'T00:00:00');
+    const to   = new Date(dataFim   + 'T23:59:59');
+    return ordens.filter(o => { const d = new Date(o.dataEntrada); return d >= from && d <= to; });
+  }, [ordens, dataInicio, dataFim]);
+
+  const ordensFiltradas = useMemo(() =>
+    mecanicoSel === 'todos' ? ordensNoPeriodo
+      : ordensNoPeriodo.filter(o => (o.mecanico?.trim() || '') === mecanicoSel),
+    [ordensNoPeriodo, mecanicoSel]
+  );
+
+  const totalMO    = ordensFiltradas.reduce((s, o) => s + o.valorMaoDeObra, 0);
+  const valorPagar = totalMO * (percentagem / 100);
+  const totalFat   = ordensFiltradas.reduce((s, o) => s + o.valorTotal, 0);
+
+  function buildRows() {
+    return ordensFiltradas.map(o => {
+      const c = clientes.find(x => x.id === o.clienteId);
+      const v = veiculos.find(x => x.id === o.veiculoId);
+      const pct = parseFloat((o.valorMaoDeObra * percentagem / 100).toFixed(2));
+      return {
+        'OS': o.numero,
+        'Data': o.dataEntrada,
+        'Cliente': c?.nome || '',
+        'Ve\u00edculo': v ? `${v.marca} ${v.modelo} ${v.placa}` : '',
+        'Mec\u00e2nico': o.mecanico || '',
+        'MO (R$)': o.valorMaoDeObra,
+        'Pe\u00e7as (R$)': o.valorPecas,
+        'Total (R$)': o.valorTotal,
+        [`${percentagem}% MO (R$)`]: pct,
+        'Status': o.status,
+      } as Record<string, unknown>;
+    });
+  }
+
+  function exportXLS() {
+    const rows = buildRows();
+    if (!rows.length) { toast.error('Nenhum dado'); return; }
+    const keys = Object.keys(rows[0]);
+    function esc(v: unknown) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    const hdr = `<Row>${keys.map(k => `<Cell><Data ss:Type="String">${esc(k)}</Data></Cell>`).join('')}</Row>`;
+    const dRows = rows.map(r => `<Row>${keys.map(k => { const v = r[k]; const t = typeof v === 'number' ? 'Number' : 'String'; return `<Cell><Data ss:Type="${t}">${esc(v)}</Data></Cell>`; }).join('')}</Row>`).join('');
+    const sheet = mecanicoSel === 'todos' ? 'Todos' : mecanicoSel;
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="${esc(sheet)}"><Table>${hdr}${dRows}</Table></Worksheet></Workbook>`;
+    const blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `relatorio-mecanico-${dataInicio}-${dataFim}.xls`; a.click();
+    URL.revokeObjectURL(a.href); toast.success('XLS exportado!');
+  }
+
+  function exportPDF() {
+    const nome = mecanicoSel === 'todos' ? 'Todos os Mec\u00e2nicos' : mecanicoSel;
+    const d1 = new Date(dataInicio + 'T12:00').toLocaleDateString('pt-BR');
+    const d2 = new Date(dataFim    + 'T12:00').toLocaleDateString('pt-BR');
+    const tableRows = ordensFiltradas.map(o => {
+      const c = clientes.find(x => x.id === o.clienteId);
+      const v = veiculos.find(x => x.id === o.veiculoId);
+      const pct = (o.valorMaoDeObra * percentagem / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+      const mo  = o.valorMaoDeObra.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+      return `<tr><td>${o.numero}</td><td>${new Date(o.dataEntrada+'T12:00').toLocaleDateString('pt-BR')}</td><td>${c?.nome||'—'}</td><td>${v?`${v.marca} ${v.modelo} - ${v.placa}`:'—'}</td><td>${o.mecanico||'—'}</td><td>${mo}</td><td><strong>${pct}</strong></td></tr>`;
+    }).join('');
+    const moFmt  = totalMO.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+    const pagFmt = valorPagar.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+    const html = `<h1>Relat\u00f3rio de Mec\u00e2nicos \u2014 Motor em Dia</h1><p><b>Mec\u00e2nico:</b> ${nome} &nbsp;|&nbsp; <b>Per\u00edodo:</b> ${d1} a ${d2} &nbsp;|&nbsp; <b>%:</b> ${percentagem}%</p><hr><table><thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Ve\u00edculo</th><th>Mec\u00e2nico</th><th>M\u00e3o de Obra</th><th>${percentagem}% a Pagar</th></tr></thead><tbody>${tableRows}</tbody></table><hr><p class="total">Total M\u00e3o de Obra: <strong>${moFmt}</strong> &nbsp;|&nbsp; ${percentagem}% a Pagar: <strong>${pagFmt}</strong></p>`;
+    const w = window.open('','_blank','width=1000,height=750');
+    if (!w) { toast.error('Popup bloqueado. Permita popups para este site.'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relat\u00f3rio</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f3f4f6;font-weight:700}h1{font-size:18px;margin:0 0 6px}hr{border:1px solid #e5e7eb;margin:10px 0}.total{background:#fefce8;padding:8px 14px;border-radius:4px;font-size:13px}@media print{.noprint{display:none}}</style></head><body>${html}<br><button class="noprint" onclick="window.print()">Imprimir</button></body></html>`);
+    w.document.close(); w.focus();
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Filtros */}
+      <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+        <h3 className="font-semibold text-[rgb(var(--foreground))] mb-4 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-500" /> Filtros do Relat\u00f3rio
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Data In\u00edcio</label>
+            <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className={inputCn} />
+          </div>
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Data Fim</label>
+            <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className={inputCn} />
+          </div>
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Mec\u00e2nico</label>
+            <select value={mecanicoSel} onChange={e => setMecanicoSel(e.target.value)} className={inputCn}>
+              <option value="todos">Todos os mec\u00e2nicos</option>
+              {mecanicosDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">% M\u00e3o de Obra</label>
+            <div className="relative">
+              <input type="number" value={percentagem} onChange={e => setPercentagem(Number(e.target.value))}
+                min="0" max="100" step="0.5" className={cn(inputCn, 'pr-8')} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[rgb(var(--muted-foreground))]">%</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-3">
+          {[{l:'Hoje',f:()=>{setDataInicio(todayStr);setDataFim(todayStr);}},{l:'M\u00eas',f:()=>{setDataInicio(firstOfMonth);setDataFim(todayStr);}},{l:'Trim.',f:()=>{const t=new Date();t.setMonth(t.getMonth()-3);setDataInicio(t.toISOString().split('T')[0]);setDataFim(todayStr);}},{l:'12M',f:()=>{const t=new Date();t.setFullYear(t.getFullYear()-1);setDataInicio(t.toISOString().split('T')[0]);setDataFim(todayStr);}}].map(({l,f})=>(
+            <button key={l} onClick={f} className="px-3 py-1 rounded-lg text-xs border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-orange-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all">{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'OS no Per\u00edodo',    val: ordensFiltradas.length.toString(), c: 'text-blue-500' },
+          { label: 'Total M\u00e3o de Obra', val: formatCurrency(totalMO),           c: 'text-orange-500' },
+          { label: `${percentagem}% a Pagar`, val: formatCurrency(valorPagar),       c: 'text-emerald-500' },
+          { label: 'Total Faturado',          val: formatCurrency(totalFat),          c: 'text-purple-500' },
+        ].map(({label, val, c}) => (
+          <div key={label} className={cn('rounded-2xl p-4 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+            <p className="text-xs text-[rgb(var(--muted-foreground))] mb-1">{label}</p>
+            <p className={cn('text-xl font-bold', c)}>{val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* OS Table */}
+      <div className={cn('rounded-2xl border overflow-hidden', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+        <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--card-border))]">
+          <h3 className="font-semibold text-[rgb(var(--foreground))]">Ordens de Servi\u00e7o</h3>
+          <div className="flex gap-2">
+            <button onClick={exportXLS} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-blue-400 hover:text-blue-500 hover:bg-blue-500/5 transition-all">
+              <FileSpreadsheet className="w-3.5 h-3.5" /> XLS
+            </button>
+            <button onClick={exportPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-red-400 hover:text-red-500 hover:bg-red-500/5 transition-all">
+              PDF
+            </button>
+          </div>
+        </div>
+        {ordensFiltradas.length === 0 ? (
+          <div className="py-12 text-center text-[rgb(var(--muted-foreground))]">
+            <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Nenhuma OS encontrada</p>
+            <p className="text-sm mt-1">Ajuste o per\u00edodo ou o mec\u00e2nico selecionado</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[rgb(var(--card-border))]">
+            <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-5 py-2.5 text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wide bg-[rgb(var(--muted))]/40">
+              <span className="col-span-2">OS</span>
+              <span className="col-span-2">Data</span>
+              <span className="col-span-3">Cliente</span>
+              <span className="col-span-2">M\u00e3o de Obra</span>
+              <span className="col-span-3 text-right">{percentagem}% MO</span>
+            </div>
+            {ordensFiltradas.map(o => {
+              const c = clientes.find(x => x.id === o.clienteId);
+              const v = veiculos.find(x => x.id === o.veiculoId);
+              return (
+                <div key={o.id} className="flex flex-wrap sm:grid sm:grid-cols-12 gap-2 px-5 py-3 items-center hover:bg-[rgb(var(--muted))]/40 transition-colors">
+                  <div className="w-full sm:w-auto sm:col-span-2">
+                    <span className="font-mono text-xs font-bold text-[rgb(var(--muted-foreground))]">{o.numero}</span>
+                    {o.mecanico && mecanicoSel === 'todos' && (
+                      <p className="text-xs text-blue-500 mt-0.5">{o.mecanico}</p>
+                    )}
+                  </div>
+                  <span className="hidden sm:block sm:col-span-2 text-xs text-[rgb(var(--muted-foreground))]">
+                    {new Date(o.dataEntrada+'T12:00').toLocaleDateString('pt-BR')}
+                  </span>
+                  <div className="flex-1 sm:col-span-3 min-w-0">
+                    <p className="text-sm font-medium text-[rgb(var(--foreground))] truncate">{c?.nome||'\u2014'}</p>
+                    {v && <p className="text-xs text-[rgb(var(--muted-foreground))] truncate">{v.placa}</p>}
+                  </div>
+                  <span className="sm:col-span-2 text-sm font-semibold text-orange-500">{formatCurrency(o.valorMaoDeObra)}</span>
+                  <span className="sm:col-span-3 text-sm font-bold text-emerald-500 sm:text-right">{formatCurrency(o.valorMaoDeObra * percentagem / 100)}</span>
+                </div>
+              );
+            })}
+            <div className="flex sm:grid sm:grid-cols-12 gap-2 px-5 py-3 bg-[rgb(var(--muted))] font-bold">
+              <span className="flex-1 sm:col-span-7 text-sm text-[rgb(var(--foreground))]">TOTAL ({ordensFiltradas.length} OS)</span>
+              <span className="sm:col-span-2 text-sm text-orange-500">{formatCurrency(totalMO)}</span>
+              <span className="sm:col-span-3 text-sm text-emerald-500 sm:text-right">{formatCurrency(valorPagar)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Content ─────────────────────────────────────────────────────────────
 function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
   const {
-    lancamentos, clientes, ordens,
+    lancamentos, clientes, veiculos, ordens,
     addLancamento, updateLancamento, deleteLancamento,
     contasPagar, addContaPagar, updateContaPagar, deleteContaPagar, pagarConta,
   } = useStore();
 
-  // Lançamentos state
+  // Tab state
+  const [tab, setTab] = useState<'financeiro' | 'relatorios'>('financeiro');
+
+  // Lan\u00e7amentos state
   const [showLancModal, setShowLancModal] = useState(false);
   const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada');
   const [descricao, setDescricao] = useState('');
@@ -232,7 +442,7 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
-      {/* Header */}
+      {/* Admin Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-700/20 border border-slate-700/30">
           <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
@@ -247,6 +457,24 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
         </button>
       </div>
 
+      {/* Tab selector */}
+      <div className="flex gap-1 p-1 bg-[rgb(var(--muted))] rounded-xl">
+        {([{key:'financeiro',label:'Financeiro',icon:DollarSign},{key:'relatorios',label:'Rel. Mec\u00e2nicos',icon:BarChart2}] as const).map(({key,label,icon:Icon})=>(
+          <button key={key} onClick={() => setTab(key)}
+            className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-all',
+              tab === key
+                ? 'bg-[rgb(var(--card))] text-orange-500 shadow-sm'
+                : 'text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]'
+            )}>
+            <Icon className="w-4 h-4" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {tab === 'relatorios' && <RelatoriosTab />}
+      {tab === 'financeiro' && (
+        <div className="space-y-5">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
@@ -529,6 +757,8 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
           onSave={updateLancamento}
           onClose={() => setEditingLanc(null)}
         />
+      )}
+        </div>
       )}
     </div>
   );

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
+import Link from 'next/link';
 
 export default function ConfiguracoesPage() {
   const { theme, toggleTheme } = useTheme();
@@ -398,7 +399,7 @@ export default function ConfiguracoesPage() {
         </p>
 
         {/* Backup completo */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
           <div>
             <p className="text-sm font-bold text-[rgb(var(--foreground))]">Backup Completo (JSON)</p>
             <p className="text-xs text-[rgb(var(--muted-foreground))]">Todos os dados da oficina em um arquivo</p>
@@ -409,6 +410,55 @@ export default function ConfiguracoesPage() {
           >
             <Download className="w-4 h-4" /> Baixar Backup
           </button>
+        </div>
+
+        {/* Importar backup */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
+          <div>
+            <p className="text-sm font-bold text-[rgb(var(--foreground))]">Importar Backup (JSON)</p>
+            <p className="text-xs text-[rgb(var(--muted-foreground))]">Restaura dados de um arquivo de backup anterior</p>
+          </div>
+          <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-600 transition-colors flex-shrink-0 cursor-pointer">
+            <Upload className="w-4 h-4" /> Importar Backup
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  try {
+                    const data = JSON.parse(ev.target?.result as string);
+                    if (!data.clientes && !data.ordens) {
+                      toast.error('Arquivo inválido. Selecione um backup do Motor em Dia.');
+                      return;
+                    }
+                    // Store keys mapping
+                    const keyMap: Record<string, string> = {
+                      clientes: 'autoflow-clientes',
+                      veiculos: 'autoflow-veiculos',
+                      ordens: 'autoflow-ordens',
+                      pecas: 'autoflow-pecas',
+                      lancamentos: 'autoflow-lancamentos',
+                      agendamentos: 'autoflow-agendamentos',
+                      orcamentos: 'autoflow-orcamentos',
+                    };
+                    Object.entries(keyMap).forEach(([key, lsKey]) => {
+                      if (data[key]) localStorage.setItem(lsKey, JSON.stringify(data[key]));
+                    });
+                    toast.success('Backup restaurado! Recarregue a página para ver os dados.');
+                    setTimeout(() => window.location.reload(), 2000);
+                  } catch {
+                    toast.error('Erro ao ler o arquivo. Certifique-se que é um JSON válido.');
+                  }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
         </div>
 
         {/* Exportações individuais */}
@@ -442,30 +492,54 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Plano */}
-      {empresa && (
-        <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
-          <div className="flex items-center gap-2 mb-3">
-            <Crown className="w-4 h-4 text-yellow-500" />
-            <h3 className="font-semibold text-[rgb(var(--foreground))]">Plano Atual</h3>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={cn(
-              'px-3 py-1 rounded-xl text-sm font-bold capitalize',
-              empresa.plano === 'premium'      ? 'bg-purple-500/15 text-purple-500' :
-              empresa.plano === 'profissional' ? 'bg-blue-500/15 text-blue-500' :
-              empresa.plano === 'starter'      ? 'bg-emerald-500/15 text-emerald-500' :
-              'bg-orange-500/15 text-orange-500'
-            )}>
-              {empresa.plano === 'trial' ? 'Trial Gratuito' : empresa.plano}
-            </span>
-            {empresa.trialExpiraEm && empresa.plano === 'trial' && (
-              <span className="text-xs text-[rgb(var(--muted-foreground))]">
-                Expira em: {new Date(empresa.trialExpiraEm).toLocaleDateString('pt-BR')}
+      {empresa && (() => {
+        const expira = empresa.trialExpiraEm ? new Date(empresa.trialExpiraEm) : null;
+        const diasRestantes = expira ? Math.max(0, Math.ceil((expira.getTime() - Date.now()) / 86400000)) : null;
+        const expirado = diasRestantes !== null && diasRestantes === 0;
+        return (
+          <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+            <div className="flex items-center gap-2 mb-4">
+              <Crown className="w-4 h-4 text-yellow-500" />
+              <h3 className="font-semibold text-[rgb(var(--foreground))]">Plano Atual</h3>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <span className={cn(
+                'px-3 py-1 rounded-xl text-sm font-bold capitalize',
+                empresa.plano === 'premium'      ? 'bg-purple-500/15 text-purple-500' :
+                empresa.plano === 'profissional' ? 'bg-blue-500/15 text-blue-500' :
+                empresa.plano === 'starter'      ? 'bg-emerald-500/15 text-emerald-500' :
+                'bg-orange-500/15 text-orange-500'
+              )}>
+                {empresa.plano === 'trial' ? 'Trial Gratuito' : empresa.plano}
               </span>
+              {expira && (
+                <span className={cn(
+                  'text-xs font-medium px-2.5 py-1 rounded-full',
+                  expirado ? 'bg-red-500/10 text-red-500' :
+                  diasRestantes! <= 5 ? 'bg-red-500/10 text-red-500' :
+                  diasRestantes! <= 10 ? 'bg-orange-500/10 text-orange-500' :
+                  'bg-slate-500/10 text-[rgb(var(--muted-foreground))]'
+                )}>
+                  {expirado ? 'Expirado' : `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
+                </span>
+              )}
+            </div>
+            {expira && (
+              <div className="text-sm text-[rgb(var(--muted-foreground))] mb-4">
+                <span className="font-medium text-[rgb(var(--foreground))]">Expira em: </span>
+                {expira.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </div>
+            )}
+            {empresa.plano === 'trial' && (
+              <Link href="/planos"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors"
+              >
+                <Crown className="w-4 h-4" /> Assinar um Plano
+              </Link>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* About */}
       <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>

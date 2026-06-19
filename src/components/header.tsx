@@ -21,7 +21,7 @@ const pageTitles: Record<string, string> = {
   '/configuracoes': 'Configuracoes',
   '/servicos': 'Cat. Servicos',
   '/orcamentos': 'Orcamentos',
-  '/relatorios': 'Relatórios',
+  '/relatorios': 'Relatórios Gerais',
 };
 
 const quickActions: Record<string, { href: string; label: string }> = {

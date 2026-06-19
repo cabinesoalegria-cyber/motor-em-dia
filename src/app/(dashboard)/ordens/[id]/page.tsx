@@ -44,9 +44,9 @@ export default function OrdemDetailPage() {
   }
 
   function handleStatusChange(status: OrdemServico['status']) {
-    if (status === 'finalizada') {
-      // Open payment modal instead of saving immediately
-      setPendingStatus('finalizada');
+    if (status === 'entregue') {
+      // Open payment modal before marking as delivered
+      setPendingStatus('entregue');
       setFormas([{ id: generateId(), tipo: 'pix', valor: ordem!.valorTotal }]);
       setShowPaymentModal(true);
       return;
@@ -78,10 +78,10 @@ export default function OrdemDetailPage() {
       total: totalFormas,
       dataRegistro: new Date().toISOString(),
     };
-    await updateOrdem(id, { status: 'finalizada', pagamento, dataConclusao: new Date().toISOString() });
+    await updateOrdem(id, { status: 'entregue', pagamento, dataConclusao: new Date().toISOString() });
     setShowPaymentModal(false);
     setFormas([]);
-    toast.success('OS finalizada! Forma de pagamento registrada. 💳');
+    toast.success('OS entregue! Pagamento registrado. 💳');
   }
 
   // suppress unused warning — pendingStatus is reserved for future use
