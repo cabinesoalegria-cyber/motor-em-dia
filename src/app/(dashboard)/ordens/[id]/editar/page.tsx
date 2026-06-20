@@ -271,10 +271,15 @@ export default function EditarOrdemPage() {
 
   function addServico() {
     if (!novoServico.trim()) return;
+    const val = Number(novoServicoValor);
+    if (!val || val <= 0) {
+      toast.error('Informe um valor válido para o serviço (não pode ser zero)');
+      return;
+    }
     setServicos(prev => [...prev, {
       id: generateId(),
       descricao: novoServico,
-      valor: Number(novoServicoValor) || 0,
+      valor: val,
     }]);
     setNovoServico('');
     setNovoServicoValor('');
@@ -293,9 +298,13 @@ export default function EditarOrdemPage() {
   }
 
   function addPeca() {
-    if (!novaPeca.trim() || !novaPecaValor) { toast.error('Informe nome e valor da peça'); return; }
-    const qtd = Number(novaPecaQtd) || 1;
+    if (!novaPeca.trim()) { toast.error('Informe o nome da peça'); return; }
     const valUnit = Number(novaPecaValor);
+    if (!valUnit || valUnit <= 0) {
+      toast.error('Informe um valor válido para a peça (não pode ser zero)');
+      return;
+    }
+    const qtd = Number(novaPecaQtd) || 1;
     const markup = Number(novaPecaMarkup) || 0;
     const rawTotal = qtd * valUnit * (1 + markup / 100);
     const valorTotalRounded = roundPeca(rawTotal);

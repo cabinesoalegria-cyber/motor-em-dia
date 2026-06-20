@@ -329,10 +329,15 @@ export default function NovaOrdemPage() {
   // ─── Handlers ─────────────────────────────────────────────────
   function addServico() {
     if (!novoServico.trim()) return;
+    const val = Number(novoServicoValor);
+    if (!val || val <= 0) {
+      toast.error('Informe um valor válido para o serviço (não pode ser zero)');
+      return;
+    }
     setServicos(prev => [...prev, {
       id: generateId(),
       descricao: novoServico,
-      valor: Number(novoServicoValor) || 0,
+      valor: val,
     }]);
     setNovoServico('');
     setNovoServicoValor('');
@@ -351,12 +356,16 @@ export default function NovaOrdemPage() {
   }
 
   function addPeca() {
-    if (!novaPeca.trim() || !novaPecaValor) {
-      toast.error('Informe o nome e o valor da peça');
+    if (!novaPeca.trim()) {
+      toast.error('Informe o nome da peça');
+      return;
+    }
+    const valUnit = Number(novaPecaValor);
+    if (!valUnit || valUnit <= 0) {
+      toast.error('Informe um valor válido para a peça (não pode ser zero)');
       return;
     }
     const qtd = Number(novaPecaQtd) || 1;
-    const valUnit = Number(novaPecaValor);
     const markup = Number(novaPecaMarkup) || 0;
     const rawTotal = qtd * valUnit * (1 + markup / 100);
     setPecasOS(prev => [...prev, {
