@@ -584,9 +584,13 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
     if (data.valorTotal !== undefined) payload.valor_total = data.valorTotal;
     if (data.observacoes !== undefined) payload.observacoes = data.observacoes;
     if (data.ordemServicoId !== undefined) payload.ordem_servico_id = data.ordemServicoId;
+    if (data.clienteId !== undefined) payload.cliente_id = data.clienteId;
+    if (data.veiculoId !== undefined) payload.veiculo_id = data.veiculoId;
+    if (data.validade !== undefined) payload.validade = data.validade;
     await supabase.from('orcamentos').update(payload).eq('id', id).eq('empresa_id', empresaId!);
     setOrcamentos(prev => prev.map(o => o.id === id ? { ...o, ...data } : o));
   }, [empresaId]);
+
 
   const deleteOrcamento = useCallback(async (id: string) => {
     await supabase.from('orcamentos').delete().eq('id', id).eq('empresa_id', empresaId!);
