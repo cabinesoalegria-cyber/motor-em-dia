@@ -100,14 +100,11 @@ export default function OrdemDetailPage() {
     if (!cliente) return;
     const officeName = localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
     const msg = [
-      `Ola ${cliente.nome}!`,
+      `Ola *${cliente.nome}*! Sua OS *${ordem!.numero}* esta com status: *${getStatusLabel(ordem!.status)}*. Veiculo: *${veiculo?.marca} ${veiculo?.modelo}* - Placa: *${veiculo?.placa}* Valor total: *${formatCurrency(ordem!.valorTotal)}*`,
       ``,
-      `Sua OS *${ordem!.numero}* esta com status: *${getStatusLabel(ordem!.status)}*.`,
+      `Estamos à disposição!`,
       ``,
-      `Veiculo: *${veiculo?.marca} ${veiculo?.modelo}* - Placa: *${veiculo?.placa}*`,
-      `Valor total: *${formatCurrency(ordem!.valorTotal)}*`,
-      ``,
-      `_${officeName}_`,
+      `_*${officeName}*_`,
     ].join('\n');
     window.open(buildWhatsAppLink(cliente.whatsapp, msg), '_blank');
   }
