@@ -234,6 +234,9 @@ function RelatoriosTab() {
   }
 
   function exportPDF() {
+    const officeName = localStorage.getItem('autoflow-office-name') || 'Motor em Dia';
+    const officePhone = localStorage.getItem('autoflow-office-phone') || '';
+    const officeLogo = localStorage.getItem('autoflow-office-logo') || '';
     const nome = mecanicoSel === 'todos' ? 'Todos os Mecânicos' : mecanicoSel;
     const d1 = new Date(dataInicio + 'T12:00').toLocaleDateString('pt-BR');
     const d2 = new Date(dataFim    + 'T12:00').toLocaleDateString('pt-BR');
@@ -246,7 +249,7 @@ function RelatoriosTab() {
     }).join('');
     const moFmt  = totalMO.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const pagFmt = valorPagar.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-    const html = `<h1>Relatório de Mecânicos — Motor em Dia</h1><p><b>Mecânico:</b> ${nome} &nbsp;|&nbsp; <b>Período:</b> ${d1} a ${d2} &nbsp;|&nbsp; <b>%:</b> ${percentagem}%</p><hr><table><thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Mecânico</th><th>Mão de Obra</th><th>${percentagem}% a Pagar</th></tr></thead><tbody>${tableRows}</tbody></table><hr><p class="total">Total Mão de Obra: <strong>${moFmt}</strong> &nbsp;|&nbsp; ${percentagem}% a Pagar: <strong>${pagFmt}</strong></p>`;
+    const html = `<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #f97316">${officeLogo ? `<img src="${officeLogo}" style="width:60px;height:60px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb">` : ''}<div><div style="font-size:22px;font-weight:800;color:#f97316">${officeName}</div>${officePhone ? `<div style="font-size:12px;color:#666">Tel: ${officePhone}</div>` : ''}</div></div><h1>Relatório de Mecânicos</h1><p><b>Mecânico:</b> ${nome} &nbsp;|&nbsp; <b>Período:</b> ${d1} a ${d2} &nbsp;|&nbsp; <b>%:</b> ${percentagem}%</p><hr><table><thead><tr><th>OS</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Mecânico</th><th>Mão de Obra</th><th>${percentagem}% a Pagar</th></tr></thead><tbody>${tableRows}</tbody></table><hr><p class="total">Total Mão de Obra: <strong>${moFmt}</strong> &nbsp;|&nbsp; ${percentagem}% a Pagar: <strong>${pagFmt}</strong></p>`;
     const w = window.open('','_blank','width=1000,height=750');
     if (!w) { toast.error('Popup bloqueado. Permita popups para este site.'); return; }
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f3f4f6;font-weight:700}h1{font-size:18px;margin:0 0 6px}hr{border:1px solid #e5e7eb;margin:10px 0}.total{background:#fefce8;padding:8px 14px;border-radius:4px;font-size:13px}@media print{.noprint{display:none}}</style></head><body>${html}<br><button class="noprint" onclick="window.print()">Imprimir</button></body></html>`);

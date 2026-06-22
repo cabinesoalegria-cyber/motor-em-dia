@@ -79,7 +79,7 @@ export default function OrdemDetailPage() {
       total: totalFormas,
       dataRegistro: new Date().toISOString(),
     };
-    const descObs = pixDesconto > 0 ? `Pagamento em PIX com desconto de ${formatCurrency(pixDesconto)} aplicado. Valor final: ${formatCurrency(totalFormas)}.` : undefined;
+    const descObs = pixDesconto > 0 ? `Desconto de ${formatCurrency(pixDesconto)} aplicado. Valor final: ${formatCurrency(totalFormas)}.` : undefined;
     await updateOrdem(id, {
       status: 'entregue',
       pagamento,
@@ -106,8 +106,6 @@ export default function OrdemDetailPage() {
       ``,
       `Veiculo: *${veiculo?.marca} ${veiculo?.modelo}* - Placa: *${veiculo?.placa}*`,
       `Valor total: *${formatCurrency(ordem!.valorTotal)}*`,
-      ``,
-      `Qualquer duvida, estamos a disposicao!`,
       ``,
       `_${officeName}_`,
     ].join('\n');
@@ -214,6 +212,8 @@ ${ordem!.servicos.length > 0 ? `
   </tbody>
 </table>` : ''}
 
+${ordem!.mecanico ? `<div style="font-size:12px;color:#6b7280;margin-top:6px;margin-bottom:4px">🔧 Mecânico responsável: <strong>${ordem!.mecanico}</strong></div>` : ''}
+
 ${ordem!.pecas.length > 0 ? `
 <div class="section-title">Peças Utilizadas</div>
 <table>
@@ -227,9 +227,10 @@ ${ordem!.pecas.length > 0 ? `
 <div class="total-section" style="margin-top:20px">
   <div class="total-row alt"><span>Mão de obra</span><span>R$ ${ordem!.valorMaoDeObra.toFixed(2).replace('.', ',')}</span></div>
   <div class="total-row"><span>Peças</span><span>R$ ${ordem!.valorPecas.toFixed(2).replace('.', ',')}</span></div>
-  ${ordem!.pagamento && ordem!.pagamento.total < ordem!.valorTotal 
-    ? `<div class="total-row"><span>Total sem desconto</span><span>R$ ${(ordem!.valorTotal).toFixed(2).replace('.', ',')}</span></div>
-       <div class="total-row final" style="color:#16a34a;font-size:1.15em"><span>TOTAL (com desconto PIX)</span><span>R$ ${(ordem!.pagamento.total).toFixed(2).replace('.', ',')}</span></div>`
+  <div class="total-row" style="border-top:1px solid #fed7aa;font-weight:600"><span>Subtotal</span><span>R$ ${(ordem!.valorMaoDeObra + ordem!.valorPecas).toFixed(2).replace('.', ',')}</span></div>
+  ${ordem!.pagamento && ordem!.pagamento.total < (ordem!.valorMaoDeObra + ordem!.valorPecas)
+    ? `<div class="total-row" style="color:#dc2626"><span>Desconto</span><span>- R$ ${((ordem!.valorMaoDeObra + ordem!.valorPecas) - ordem!.pagamento.total).toFixed(2).replace('.', ',')}</span></div>
+       <div class="total-row final" style="background:#16a34a"><span>TOTAL</span><span>R$ ${(ordem!.pagamento.total).toFixed(2).replace('.', ',')}</span></div>`
     : `<div class="total-row final"><span>TOTAL</span><span>R$ ${(ordem!.pagamento?.total ?? ordem!.valorTotal).toFixed(2).replace('.', ',')}</span></div>`
   }
 </div>
@@ -552,43 +553,47 @@ ${ordem!.pecas.length > 0 ? `
                 </div>
               ))}
 
-              {/* PIX Discount section */}
-              {formas.some(f => f.tipo === 'pix') && (
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Smartphone className="w-4 h-4 text-emerald-500" />
-                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Desconto PIX</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <label className="text-xs text-[rgb(var(--muted-foreground))] mb-1 block">Valor do desconto (R$)</label>
-                      <input
-                        type="number"
-                        value={pixDesconto || ''}
-                        onChange={e => {
-                          const d = Math.max(0, Number(e.target.value));
-                          setPixDesconto(d);
-                          // Auto-adjust PIX forma value
-                          setFormas(prev => prev.map(f => f.tipo === 'pix' ? { ...f, valor: Math.max(0, (ordem?.valorTotal ?? 0) - d) } : f));
-                        }}
-                        min="0"
-                        step="0.01"
-                        placeholder="0,00"
-                        className="w-full px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                      />
-                    </div>
-                    {pixDesconto > 0 && (
-                      <div className="text-right">
-                        <p className="text-xs text-[rgb(var(--muted-foreground))]">Valor com desconto</p>
-                        <p className="text-lg font-bold text-emerald-500">{formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)}</p>
-                      </div>
-                    )}
+              {/* Discount section — available for all payment methods */}
+              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CircleDollarSign className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">Desconto</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-[rgb(var(--muted-foreground))] mb-1 block">Valor do desconto (R$)</label>
+                    <input
+                      type="number"
+                      value={pixDesconto || ''}
+                      onChange={e => {
+                        const d = Math.max(0, Number(e.target.value));
+                        setPixDesconto(d);
+                        // Auto-adjust first forma value
+                        setFormas(prev => {
+                          const updated = [...prev];
+                          if (updated.length > 0) {
+                            updated[0] = { ...updated[0], valor: Math.max(0, (ordem?.valorTotal ?? 0) - d) };
+                          }
+                          return updated;
+                        });
+                      }}
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      className="w-full px-3 py-2 rounded-xl text-sm border border-[rgb(var(--input-border))] bg-[rgb(var(--input-bg))] text-[rgb(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    />
                   </div>
                   {pixDesconto > 0 && (
-                    <p className="text-xs text-[rgb(var(--muted-foreground))] mt-2">💡 O valor registrado no financeiro será {formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)} (com desconto aplicado)</p>
+                    <div className="text-right">
+                      <p className="text-xs text-[rgb(var(--muted-foreground))]">Valor com desconto</p>
+                      <p className="text-lg font-bold text-orange-500">{formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)}</p>
+                    </div>
                   )}
                 </div>
-              )}
+                {pixDesconto > 0 && (
+                  <p className="text-xs text-[rgb(var(--muted-foreground))] mt-2">💡 O valor registrado no financeiro será {formatCurrency((ordem?.valorTotal ?? 0) - pixDesconto)} (com desconto aplicado)</p>
+                )}
+              </div>
 
               {/* Add forma */}
               <button type="button" onClick={addForma}
@@ -606,7 +611,7 @@ ${ordem!.pecas.length > 0 ? `
                 <span>{formatCurrency(totalFormas)} {diffOk ? '✓' : `(faltam ${formatCurrency(valorOS - totalFormas)})`}</span>
               </div>
               {pixDesconto > 0 && (
-                <p className="text-xs text-center text-[rgb(var(--muted-foreground))]">Desconto PIX: {formatCurrency(pixDesconto)} aplicado</p>
+                <p className="text-xs text-center text-[rgb(var(--muted-foreground))]">Desconto: {formatCurrency(pixDesconto)} aplicado</p>
               )}
               <div className="flex gap-3">
                 <button type="button" onClick={() => { setShowPaymentModal(false); setPixDesconto(0); }}
