@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { OrcamentoItem } from '@/lib/types';
 import { formatCurrency, formatDate, generateId, cn } from '@/lib/utils';
 import {
   FileText, Plus, Trash2, ChevronDown, Send, Printer,
-  CheckCircle, XCircle, ArrowRight, Car, Clock
+  CheckCircle, XCircle, ArrowRight, Clock, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -46,6 +46,8 @@ export default function OrcamentosPage() {
   const { clientes, veiculos, orcamentos, addOrcamento, updateOrcamento, deleteOrcamento, approveOrcamento, servicosCatalogo, pecas: stockPecas } = useStore();
 
   const [tab, setTab] = useState<'lista' | 'novo'>('lista');
+
+  // New orcamento form state
   const [clienteId, setClienteId] = useState('');
   const [veiculoId, setVeiculoId] = useState('');
   const [validade, setValidade] = useState(() => {
@@ -55,12 +57,20 @@ export default function OrcamentosPage() {
   const [observacoes, setObservacoes] = useState('');
   const [itens, setItens] = useState<OrcamentoItem[]>([]);
 
-  // Item inputs
-  const [itemDesc, setItemDesc] = useState('');
-  const [itemTipo, setItemTipo] = useState<'servico' | 'peca'>('servico');
-  const [itemQtd, setItemQtd] = useState('1');
-  const [itemValor, setItemValor] = useState('');
-  const [showItemSuggestions, setShowItemSuggestions] = useState(false);
+  // Separate servico/peca inputs
+  const [servicoDesc, setServicoDesc] = useState('');
+  const [servicoValor, setServicoValor] = useState('');
+  const [showServicSugg, setShowServicSugg] = useState(false);
+
+  const [pecaDesc, setPecaDesc] = useState('');
+  const [pecaQtd, setPecaQtd] = useState('1');
+  const [pecaValor, setPecaValor] = useState('');
+  const [showPecaSugg, setShowPecaSugg] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editObservacoes, setEditObservacoes] = useState('');
+  const [editValidade, setEditValidade] = useState('');
 
   const clienteVeiculos = veiculos.filter(v => v.clienteId === clienteId);
   const valorTotal = itens.reduce((s, i) => s + i.valorTotal, 0);
@@ -74,44 +84,46 @@ export default function OrcamentosPage() {
     [orcamentos, clientes, veiculos]
   );
 
-  const itemSuggestions = useMemo(() => {
-    const q = itemDesc.toLowerCase().trim();
-    if (itemTipo === 'servico') {
-      const list = servicosCatalogo;
-      if (!q) return list.slice(0, 8);
-      return list.filter(s =>
-        s.nome.toLowerCase().includes(q) ||
-        (s.categoria || '').toLowerCase().includes(q) ||
-        (s.descricao || '').toLowerCase().includes(q)
-      ).slice(0, 10);
-    } else {
-      const list = stockPecas;
-      if (!q) return list.slice(0, 8);
-      return list.filter(p =>
-        p.nome.toLowerCase().includes(q) ||
-        (p.codigo || '').toLowerCase().includes(q) ||
-        (p.marcaVeiculo || '').toLowerCase().includes(q) ||
-        (p.modeloVeiculo || '').toLowerCase().includes(q) ||
-        (p.fornecedor || '').toLowerCase().includes(q)
-      ).slice(0, 10);
-    }
-  }, [itemDesc, itemTipo, servicosCatalogo, stockPecas]);
+  // Autocomplete suggestions
+  const servicoSuggestions = useMemo(() => {
+    const q = servicoDesc.toLowerCase().trim();
+    if (!q) return servicosCatalogo.slice(0, 8);
+    return servicosCatalogo.filter(s =>
+      s.nome.toLowerCase().includes(q) ||
+      (s.categoria || '').toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [servicoDesc, servicosCatalogo]);
 
-  function addItem() {
-    if (!itemDesc || !itemValor) { toast.error('Preencha descrição e valor'); return; }
-    const qtd = Number(itemQtd) || 1;
-    const val = Number(itemValor);
-    setItens(prev => [...prev, {
-      id: generateId(), descricao: itemDesc, tipo: itemTipo,
-      quantidade: qtd, valorUnitario: val, valorTotal: qtd * val,
-    }]);
-    setItemDesc(''); setItemValor(''); setItemQtd('1');
+  const pecaSuggestions = useMemo(() => {
+    const q = pecaDesc.toLowerCase().trim();
+    if (!q) return stockPecas.slice(0, 8);
+    return stockPecas.filter(p =>
+      p.nome.toLowerCase().includes(q) ||
+      (p.codigo || '').toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [pecaDesc, stockPecas]);
+
+  function addServico() {
+    if (!servicoDesc.trim()) return;
+    const val = Number(servicoValor);
+    if (!val || val <= 0) { toast.error('Informe o valor do serviço'); return; }
+    setItens(prev => [...prev, { id: generateId(), descricao: servicoDesc, tipo: 'servico', quantidade: 1, valorUnitario: val, valorTotal: val }]);
+    setServicoDesc(''); setServicoValor('');
+  }
+
+  function addPeca() {
+    if (!pecaDesc.trim()) return;
+    const val = Number(pecaValor);
+    if (!val || val <= 0) { toast.error('Informe o valor da peça'); return; }
+    const qtd = Number(pecaQtd) || 1;
+    setItens(prev => [...prev, { id: generateId(), descricao: pecaDesc, tipo: 'peca', quantidade: qtd, valorUnitario: val, valorTotal: qtd * val }]);
+    setPecaDesc(''); setPecaValor(''); setPecaQtd('1');
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clienteId || !veiculoId || itens.length === 0) {
-      toast.error('Selecione cliente, veículo e adicione ao menos 1 item');
+    if (!clienteId || !veiculoId) {
+      toast.error('Selecione cliente e veículo');
       return;
     }
     addOrcamento({ clienteId, veiculoId, itens, valorTotal, validade, status: 'pendente', observacoes });
@@ -185,7 +197,7 @@ export default function OrcamentosPage() {
   </div>
 </div>
 
-<table>
+${o.itens.length > 0 ? `<table>
   <thead>
     <tr><th>Descrição</th><th>Tipo</th><th style="text-align:center">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr>
   </thead>
@@ -203,9 +215,9 @@ export default function OrcamentosPage() {
       <td style="text-align:right;color:#f97316">R$ ${o.valorTotal.toFixed(2).replace('.', ',')}</td>
     </tr>
   </tbody>
-</table>
+</table>` : '<p style="color:#888;font-size:13px;margin:16px 0">Nenhum item no orçamento.</p>'}
 
-${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observacoes}</div>` : ''}
+${o.observacoes ? `<div class="obs"><strong>Problema Relatado pelo Cliente:</strong> ${o.observacoes}</div>` : ''}
 
 <div style="margin: 16px 0; padding: 10px 14px; background: #fff8e1; border: 1.5px solid #f59e0b; border-radius: 8px; font-size: 13px; color: #92400e; font-weight: 600;">
   ⚠️ Obs: ORÇAMENTO SUJEITO A ALTERAÇÕES!
@@ -250,14 +262,14 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
   function handleSendWhatsApp(o: typeof orcamentosComDetalhes[0]) {
     if (!o.cliente) return;
     const officeName = localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
-    const msg = `Olá ${o.cliente.nome}! 📋\n\nSegue o *Orçamento ${o.numero}* da ${officeName}:\n\n${o.itens.map(i => `• ${i.descricao}: *R$ ${i.valorTotal.toFixed(2).replace('.', ',')}*`).join('\n')}\n\n*Total: R$ ${o.valorTotal.toFixed(2).replace('.', ',')}*\n\n_Válido até ${new Date(o.validade + 'T12:00:00').toLocaleDateString('pt-BR')}_\n\nResponda *SIM* para aprovar ou *NÃO* para recusar.\n\n⚠️ Obs: ORÇAMENTO SUJEITO A ALTERAÇÕES!\n\n_${officeName}_`;
+    const msg = `Olá ${o.cliente.nome}! 📋\n\nSegue o *Orçamento ${o.numero}* da ${officeName}:\n\n${o.itens.map(i => `• ${i.descricao}: *R$ ${i.valorTotal.toFixed(2).replace('.', ',')}*`).join('\n')}${o.itens.length === 0 ? '_(sem itens)_' : ''}\n\n*Total: R$ ${o.valorTotal.toFixed(2).replace('.', ',')}*\n\n_Válido até ${new Date(o.validade + 'T12:00:00').toLocaleDateString('pt-BR')}_\n\nResponda *SIM* para aprovar ou *NÃO* para recusar.\n\n⚠️ Obs: ORÇAMENTO SUJEITO A ALTERAÇÕES!\n\n_${officeName}_`;
     window.open(`https://wa.me/55${o.cliente.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
-      {/* Tabs */}
-      <div className="flex items-center gap-3">
+      {/* Tabs + New Button */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex gap-1 bg-[rgb(var(--muted))] rounded-xl p-1">
           <button
             onClick={() => setTab('lista')}
@@ -272,6 +284,14 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
             + Novo Orçamento
           </button>
         </div>
+        {tab === 'lista' && (
+          <button
+            onClick={() => setTab('novo')}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors shadow-md shadow-orange-500/20"
+          >
+            <Plus className="w-4 h-4" /> Novo Orçamento
+          </button>
+        )}
       </div>
 
       {/* LISTA */}
@@ -324,10 +344,15 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
                     </Link>
                   ) : o.status === 'pendente' ? (
                     <>
-                      <button onClick={() => {
-                        const osId = approveOrcamento(o.id);
-                        toast.success('Orçamento aprovado! OS criada automaticamente.');
-                        if (osId) window.location.href = `/ordens/${osId}`;
+                      <button onClick={async () => {
+                        try {
+                          const osId = await approveOrcamento(o.id);
+                          toast.success('Orçamento aprovado! OS criada automaticamente.');
+                          if (osId) window.location.href = `/ordens/${osId}`;
+                        } catch (err) {
+                          toast.error('Erro ao criar OS. Tente novamente.');
+                          console.error(err);
+                        }
                       }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar e Criar OS
@@ -346,11 +371,41 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] hover:bg-[rgb(var(--card-border))] transition-colors">
                     <Printer className="w-3.5 h-3.5" /> PDF/Imprimir
                   </button>
+                  {o.status !== 'aprovado' && (
+                    <button onClick={() => { setEditingId(editingId === o.id ? null : o.id); setEditObservacoes(o.observacoes || ''); setEditValidade(o.validade); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] hover:bg-orange-500/10 hover:text-orange-500 transition-colors">
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </button>
+                  )}
                   <button onClick={() => { if (confirm('Excluir orçamento?')) { deleteOrcamento(o.id); toast.success('Excluído'); } }}
                     className="ml-auto p-1.5 rounded-lg text-[rgb(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Inline Edit Panel */}
+                {editingId === o.id && (
+                  <div className="mt-3 pt-3 border-t border-[rgb(var(--card-border))] space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Validade</label>
+                        <input type="date" value={editValidade} onChange={e => setEditValidade(e.target.value)} className={inputCn} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Problema / Observações</label>
+                      <textarea value={editObservacoes} onChange={e => setEditObservacoes(e.target.value)} className={cn(inputCn, 'resize-none')} rows={2} />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setEditingId(null)} className="flex-1 py-2 rounded-xl border border-[rgb(var(--card-border))] text-sm text-[rgb(var(--muted-foreground))]">Cancelar</button>
+                      <button type="button" onClick={() => {
+                        updateOrcamento(o.id, { observacoes: editObservacoes, validade: editValidade });
+                        toast.success('Orçamento atualizado!');
+                        setEditingId(null);
+                      }} className="flex-1 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600">Salvar</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -382,17 +437,16 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgb(var(--muted-foreground))] pointer-events-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-[rgb(var(--foreground))]">Validade</label>
-                  <input type="date" value={validade} onChange={e => setValidade(e.target.value)} className={inputCn} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-[rgb(var(--foreground))]">Validade</label>
+                <input type="date" value={validade} onChange={e => setValidade(e.target.value)} className={inputCn} />
               </div>
             </div>
           </SectionCard>
 
           <SectionCard title="Itens do Orçamento">
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Existing items */}
               {itens.map(item => (
                 <div key={item.id} className="flex items-center gap-2 p-3 rounded-xl bg-[rgb(var(--muted))]">
                   <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0',
@@ -408,140 +462,84 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
                 </div>
               ))}
 
-              {/* Row: tipo selector */}
-              <div className="flex gap-2 mb-1">
-                <button
-                  type="button"
-                  onClick={() => { setItemTipo('servico'); setItemDesc(''); setItemValor(''); }}
-                  className={cn('flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors',
-                    itemTipo === 'servico'
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : 'border-[rgb(var(--input-border))] text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--muted))]'
-                  )}
-                >
-                  🔧 Serviço
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setItemTipo('peca'); setItemDesc(''); setItemValor(''); }}
-                  className={cn('flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors',
-                    itemTipo === 'peca'
-                      ? 'bg-emerald-500 text-white border-emerald-500'
-                      : 'border-[rgb(var(--input-border))] text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--muted))]'
-                  )}
-                >
-                  📦 Peça
-                </button>
+              {/* Serviço row */}
+              <div>
+                <label className="block text-xs font-semibold text-blue-500 uppercase tracking-wide mb-1.5">🔧 Serviço</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative z-30">
+                    <input
+                      type="text"
+                      placeholder="Buscar no catálogo de serviços..."
+                      value={servicoDesc}
+                      onChange={e => { setServicoDesc(e.target.value); setShowServicSugg(true); }}
+                      onFocus={() => setShowServicSugg(true)}
+                      onBlur={() => setTimeout(() => setShowServicSugg(false), 200)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addServico(); } }}
+                      className={cn(inputCn, 'w-full')}
+                    />
+                    {showServicSugg && servicoSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 rounded-xl shadow-2xl border border-[rgb(var(--card-border))] overflow-hidden z-[999]" style={{ backgroundColor: 'rgb(var(--card))' }}>
+                        <div className="max-h-48 overflow-y-auto">
+                          {servicoSuggestions.map(s => (
+                            <button key={s.id} type="button"
+                              onMouseDown={e => { e.preventDefault(); setServicoDesc(s.nome); setServicoValor(String(s.valorPadrao)); setShowServicSugg(false); }}
+                              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[rgb(var(--muted))] transition-colors text-left border-b border-[rgb(var(--card-border))] last:border-0">
+                              <span className="text-sm text-[rgb(var(--foreground))]">{s.nome}</span>
+                              <span className="text-sm font-bold text-blue-500 ml-3">{formatCurrency(s.valorPadrao)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <input type="number" placeholder="R$" value={servicoValor} onChange={e => setServicoValor(e.target.value)}
+                    className={cn(inputCn, 'w-24 flex-shrink-0')} min="0" step="0.01"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addServico(); } }} />
+                  <button type="button" onClick={addServico} className="p-2.5 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-colors flex-shrink-0">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                {/* Description with autocomplete */}
-                <div className="flex-1 relative z-30">
-                  <input
-                    type="text"
-                    placeholder={itemTipo === 'servico' ? 'Buscar no catálogo de serviços...' : 'Buscar no estoque de peças...'}
-                    value={itemDesc}
-                    onChange={e => { setItemDesc(e.target.value); setShowItemSuggestions(true); }}
-                    onFocus={() => setShowItemSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowItemSuggestions(false), 200)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
-                    className={cn(inputCn, 'w-full')}
-                  />
-                  {showItemSuggestions && (
-                    <div
-                      className="absolute top-full left-0 right-0 mt-1 rounded-xl shadow-2xl border border-[rgb(var(--card-border))] overflow-hidden z-[999]"
-                      style={{ backgroundColor: 'rgb(var(--card))' }}
-                    >
-                      {itemSuggestions.length === 0 ? (
-                        <p className="px-4 py-3 text-xs text-[rgb(var(--muted-foreground))]">
-                          {itemTipo === 'servico' ? 'Nenhum serviço encontrado. Pode digitar livremente.' : 'Nenhuma peça encontrada. Pode digitar livremente.'}
-                        </p>
-                      ) : (
-                        <div className="max-h-56 overflow-y-auto">
-                          {itemTipo === 'servico'
-                            ? (itemSuggestions as typeof servicosCatalogo).map(s => (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onMouseDown={e => {
-                                    e.preventDefault();
-                                    setItemDesc(s.nome);
-                                    setItemValor(String(s.valorPadrao));
-                                    setShowItemSuggestions(false);
-                                  }}
-                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[rgb(var(--muted))] transition-colors text-left border-b border-[rgb(var(--card-border))] last:border-0"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-sm text-[rgb(var(--foreground))] font-medium">{s.nome}</span>
-                                    {s.categoria && (
-                                      <span className="ml-2 text-xs bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded">{s.categoria}</span>
-                                    )}
-                                    {s.descricao && (
-                                      <p className="text-xs text-[rgb(var(--muted-foreground))] truncate mt-0.5">{s.descricao}</p>
-                                    )}
-                                  </div>
-                                  <span className="text-sm font-bold text-blue-500 ml-3 flex-shrink-0">{formatCurrency(s.valorPadrao)}</span>
-                                </button>
-                              ))
-                            : (itemSuggestions as typeof stockPecas).map(p => (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  onMouseDown={e => {
-                                    e.preventDefault();
-                                    setItemDesc(p.nome);
-                                    setItemValor(String(p.custo));
-                                    setShowItemSuggestions(false);
-                                  }}
-                                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[rgb(var(--muted))] transition-colors text-left border-b border-[rgb(var(--card-border))] last:border-0"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-sm text-[rgb(var(--foreground))] font-medium">{p.nome}</span>
-                                    {p.codigo && (
-                                      <span className="ml-2 text-xs font-mono bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded">{p.codigo}</span>
-                                    )}
-                                    {(p.marcaVeiculo || p.modeloVeiculo) && (
-                                      <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">{[p.marcaVeiculo, p.modeloVeiculo, p.anoVeiculo].filter(Boolean).join(' ')}</p>
-                                    )}
-                                  </div>
-                                  <span className="text-sm font-bold text-emerald-500 ml-3 flex-shrink-0">{formatCurrency(p.custo)}</span>
-                                </button>
-                              ))
-                          }
+              {/* Peça row */}
+              <div>
+                <label className="block text-xs font-semibold text-emerald-500 uppercase tracking-wide mb-1.5">📦 Peça</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative z-20">
+                    <input
+                      type="text"
+                      placeholder="Buscar no estoque de peças..."
+                      value={pecaDesc}
+                      onChange={e => { setPecaDesc(e.target.value); setShowPecaSugg(true); }}
+                      onFocus={() => setShowPecaSugg(true)}
+                      onBlur={() => setTimeout(() => setShowPecaSugg(false), 200)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPeca(); } }}
+                      className={cn(inputCn, 'w-full')}
+                    />
+                    {showPecaSugg && pecaSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 rounded-xl shadow-2xl border border-[rgb(var(--card-border))] overflow-hidden z-[998]" style={{ backgroundColor: 'rgb(var(--card))' }}>
+                        <div className="max-h-48 overflow-y-auto">
+                          {pecaSuggestions.map(p => (
+                            <button key={p.id} type="button"
+                              onMouseDown={e => { e.preventDefault(); setPecaDesc(p.nome); setPecaValor(String(p.custo)); setShowPecaSugg(false); }}
+                              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[rgb(var(--muted))] transition-colors text-left border-b border-[rgb(var(--card-border))] last:border-0">
+                              <span className="text-sm text-[rgb(var(--foreground))]">{p.nome}</span>
+                              <span className="text-sm font-bold text-emerald-500 ml-3">{formatCurrency(p.custo)}</span>
+                            </button>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
+                  <input type="number" placeholder="Qtd" value={pecaQtd} onChange={e => setPecaQtd(e.target.value)}
+                    className={cn(inputCn, 'w-16 flex-shrink-0')} min="1" />
+                  <input type="number" placeholder="R$" value={pecaValor} onChange={e => setPecaValor(e.target.value)}
+                    className={cn(inputCn, 'w-24 flex-shrink-0')} min="0" step="0.01"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPeca(); } }} />
+                  <button type="button" onClick={addPeca} className="p-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex-shrink-0">
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
-
-                {/* Qtd */}
-                <input
-                  type="number"
-                  placeholder="Qtd"
-                  value={itemQtd}
-                  onChange={e => setItemQtd(e.target.value)}
-                  className={cn(inputCn, 'w-16 flex-shrink-0')}
-                  min="1"
-                />
-
-                {/* Valor */}
-                <input
-                  type="number"
-                  placeholder="R$"
-                  value={itemValor}
-                  onChange={e => setItemValor(e.target.value)}
-                  className={cn(inputCn, 'w-24 flex-shrink-0')}
-                  min="0" step="0.01"
-                />
-
-                {/* Add */}
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="p-2.5 rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition-colors flex-shrink-0"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
               </div>
 
               {itens.length > 0 && (
@@ -553,13 +551,13 @@ ${o.observacoes ? `<div class="obs"><strong>Observações:</strong> ${o.observac
             </div>
           </SectionCard>
 
-          <SectionCard title="Observações">
+          <SectionCard title="Problema Relatado pelo Cliente">
             <textarea
               value={observacoes}
               onChange={e => setObservacoes(e.target.value)}
               className={cn(inputCn, 'resize-none')}
               rows={3}
-              placeholder="Problema relatado pelo cliente"
+              placeholder="Descreva o problema que o cliente relatou..."
             />
           </SectionCard>
 
