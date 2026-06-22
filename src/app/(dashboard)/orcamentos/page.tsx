@@ -514,12 +514,11 @@ ${o.observacoes ? `<div class="obs"><strong>Problema Relatado pelo Cliente:</str
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] hover:bg-[rgb(var(--card-border))] transition-colors">
                     <Printer className="w-3.5 h-3.5" /> PDF/Imprimir
                   </button>
-                  {o.status !== 'aprovado' && (
-                    <button onClick={() => openEdit(o)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] hover:bg-orange-500/10 hover:text-orange-500 transition-colors">
-                      <Pencil className="w-3.5 h-3.5" /> Editar
-                    </button>
-                  )}
+                  <button onClick={() => openEdit(o)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] hover:bg-orange-500/10 hover:text-orange-500 transition-colors">
+                    <Pencil className="w-3.5 h-3.5" /> Editar{o.status === 'aprovado' ? ' (Reabrir)' : ''}
+                  </button>
+
                   <button onClick={() => { if (confirm('Excluir orçamento?')) { deleteOrcamento(o.id); toast.success('Excluído'); } }}
                     className="ml-auto p-1.5 rounded-lg text-[rgb(var(--muted-foreground))] hover:text-red-500 hover:bg-red-500/10 transition-colors">
                     <Trash2 className="w-4 h-4" />
