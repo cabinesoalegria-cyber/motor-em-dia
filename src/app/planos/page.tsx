@@ -156,6 +156,7 @@ export default function PlanosPage() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
+      // Atualiza dados locais E força reload da página para garantir que o novo plano apareça
       await refreshEmpresa();
 
       if (data.isUpgrade) {
@@ -166,10 +167,15 @@ export default function PlanosPage() {
 
       if (data.invoiceUrl) {
         toast.info('Abrindo página de pagamento do Asaas...', { duration: 3000 });
-        setTimeout(() => window.open(data.invoiceUrl, '_blank'), 1500);
+        setTimeout(() => {
+          window.open(data.invoiceUrl, '_blank');
+          window.location.reload(); // garante UI atualizada
+        }, 1500);
       } else {
         toast.info('Acesse o Asaas para acompanhar sua fatura.', { duration: 4000 });
+        setTimeout(() => window.location.reload(), 2000);
       }
+
     } catch (err: any) {
       toast.error(err.message ?? 'Erro de conexão');
     } finally {

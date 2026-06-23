@@ -62,20 +62,20 @@ export async function POST(req: NextRequest) {
       const empresa = await findEmpresa(assinaturaId, externalRef);
 
       if (empresa) {
-        // Calcular próxima expiração (30 dias)
-        const planoExpira = new Date();
-        planoExpira.setDate(planoExpira.getDate() + 30);
-
-        await supabaseAdmin
-          .from('empresas')
-          .update({
-            status: 'ativo',
-            plano_expira_em: planoExpira.toISOString(),
-            inadimplente: false,
-          })
-          .eq('id', empresa.id);
-
-        console.log(`[Webhook] Empresa ${empresa.id} → ATIVO após pagamento confirmado`);
+        // Tenta via RPC primeiro (bypassa RLS)
+        const { error } = await supabaseAdmin.rpc('atualizar_status_pagamento', {
+          p_assinatura_id: assinaturaId ?? empresa.id,
+          p_status:        'ativo',
+          p_inadimplente:  false,
+        });
+        if (error) {
+          // Fallback direto
+          await supabaseAdmin
+            .from('empresas')
+            .update({ status: 'ativo', inadimplente: false })
+            .eq('id', empresa.id);
+        }
+        console.log(`[Webhook] Empresa ${empresa.id} → ATIVO`);
       }
     }
 
@@ -85,14 +85,21 @@ export async function POST(req: NextRequest) {
       const empresa = await findEmpresa(assinaturaId, externalRef);
 
       if (empresa) {
-        await supabaseAdmin
-          .from('empresas')
-          .update({ inadimplente: true })
-          .eq('id', empresa.id);
-
+        const { error } = await supabaseAdmin.rpc('atualizar_status_pagamento', {
+          p_assinatura_id: assinaturaId ?? empresa.id,
+          p_status:        'inadimplente',
+          p_inadimplente:  true,
+        });
+        if (error) {
+          await supabaseAdmin
+            .from('empresas')
+            .update({ inadimplente: true })
+            .eq('id', empresa.id);
+        }
         console.log(`[Webhook] Empresa ${empresa.id} → INADIMPLENTE`);
       }
     }
+
 
     else if (eventType === 'SUBSCRIPTION_CANCELLED' || eventType === 'SUBSCRIPTION_DELETED') {
       const assinaturaId = subscription?.id;
