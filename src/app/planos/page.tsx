@@ -172,8 +172,7 @@ export default function PlanosPage() {
         </div>
         <h1 className="text-3xl font-bold text-[rgb(var(--foreground))]">Planos e Preços</h1>
         <p className="text-[rgb(var(--muted-foreground))]">
-          Escolha o plano ideal para sua oficina.{' '}
-          <strong className="text-orange-500">14 dias grátis</strong> em todos os planos.
+          Escolha o plano ideal para sua oficina. Assine e comece a usar agora.
         </p>
         <div className="flex flex-wrap justify-center gap-4 pt-2">
           {[
@@ -232,7 +231,7 @@ export default function PlanosPage() {
                   <span className="text-3xl font-black text-[rgb(var(--foreground))]">R$ {plano.valor}</span>
                   <span className="text-sm text-[rgb(var(--muted-foreground))]">/mês</span>
                 </div>
-                <p className="text-xs text-emerald-500 font-medium mt-1">14 dias grátis para testar</p>
+                <p className="text-xs text-[rgb(var(--muted-foreground))] mt-1">Cobrança mensal automática</p>
               </div>
 
               <ul className="space-y-2.5 flex-1 mb-6">
@@ -261,7 +260,7 @@ export default function PlanosPage() {
                 >
                   {isLoading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Aguarde...</>
-                    : 'Começar 14 dias grátis'
+                    : 'Assinar agora'
                   }
                 </button>
               )}
@@ -286,11 +285,13 @@ export default function PlanosPage() {
         ))}
       </div>
 
-      {/* Sandbox notice */}
-      <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm text-yellow-700 dark:text-yellow-400">
-        <strong>🧪 Modo Sandbox Ativo:</strong> Nenhuma cobrança real será feita.
-        <br />Cartão de teste: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">5162 3062 3062 3062</code> · CVV: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">318</code> · Validade: qualquer data futura.
-      </div>
+      {/* Sandbox notice - remove in production */}
+      {process.env.NEXT_PUBLIC_ASAAS_SANDBOX === 'true' && (
+        <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm text-yellow-700 dark:text-yellow-400">
+          <strong>🧪 Modo Sandbox Ativo:</strong> Nenhuma cobrança real será feita.
+          <br />Cartão de teste: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">5162 3062 3062 3062</code> · CVV: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">318</code> · Validade: qualquer data futura.
+        </div>
+      )}
 
       {/* ── CPF/CNPJ Modal ── */}
       {modalPlano && (
@@ -317,7 +318,7 @@ export default function PlanosPage() {
               <p className="text-sm text-orange-500 font-semibold">
                 Plano {PLANOS.find(p => p.key === modalPlano)?.nome} — R$ {PLANOS.find(p => p.key === modalPlano)?.valor}/mês
               </p>
-              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">✅ 14 dias grátis · Primeira cobrança só no 15º dia</p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">💳 Cobrança mensal automática via PIX, cartão ou boleto</p>
             </div>
 
             {/* CPF/CNPJ input */}

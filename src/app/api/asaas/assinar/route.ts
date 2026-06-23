@@ -54,16 +54,14 @@ export async function POST(req: NextRequest) {
         .eq('id', empresaId);
     }
 
-    // 3. Calcular data de início (após trial de 14 dias)
-    const trialDays = 14;
+    // 3. Data de vencimento = hoje (sem dias grátis — o trial já foi dado no onboarding)
     const nextDueDate = new Date();
-    nextDueDate.setDate(nextDueDate.getDate() + trialDays);
     const dueDateStr = nextDueDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // 4. Criar assinatura mensal
     const subscription = await asaasPost('/subscriptions', {
       customer: customerId,
-      billingType: 'UNDEFINED', // cliente escolhe forma ao pagar
+      billingType: 'UNDEFINED', // cliente escolhe a forma ao pagar (PIX, cartão, boleto)
       value: planoConfig.valor,
       nextDueDate: dueDateStr,
       cycle: 'MONTHLY',
@@ -73,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const subscriptionId: string = subscription.id;
 
-    // 5. Buscar a primeira fatura gerada para obter a URL de pagamento
+    // 5. Buscar URL de pagamento da 1ª fatura
     let invoiceUrl: string | null = null;
     try {
       const payments = await asaasGet(`/subscriptions/${subscriptionId}/payments`);
@@ -81,21 +79,21 @@ export async function POST(req: NextRequest) {
         invoiceUrl = payments.data[0].invoiceUrl ?? payments.data[0].bankSlipUrl ?? null;
       }
     } catch {
-      // Se não conseguir a fatura, ainda retorna sucesso (usuário pode pagar depois)
+      // Se não conseguir a fatura ainda, retorna sucesso mesmo assim
     }
 
     // 6. Atualizar empresa no Supabase
-    const trialExpira = new Date();
-    trialExpira.setDate(trialExpira.getDate() + trialDays);
+    const planoExpira = new Date();
+    planoExpira.setDate(planoExpira.getDate() + 30); // próximo vencimento em 30 dias
 
     await supabaseAdmin
       .from('empresas')
       .update({
         assinatura_id: subscriptionId,
         plano: plano,
-        status: 'trial', // começa em trial, webhook atualiza para 'ativo' após pagamento
-        trial_expira_em: trialExpira.toISOString(),
-        plano_expira_em: null,
+        status: 'ativo',
+        trial_expira_em: null,      // encerrou o trial
+        plano_expira_em: planoExpira.toISOString(),
       })
       .eq('id', empresaId);
 
@@ -103,10 +101,10 @@ export async function POST(req: NextRequest) {
       ok: true,
       subscriptionId,
       invoiceUrl,
-      trialExpira: trialExpira.toISOString(),
       plano: planoConfig.nome,
       valor: planoConfig.valor,
     });
+
 
   } catch (err: any) {
     console.error('[Asaas/assinar]', err);
