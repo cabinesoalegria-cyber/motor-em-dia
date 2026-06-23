@@ -83,10 +83,10 @@ export async function POST(req: NextRequest) {
     });
     const subscriptionId: string = subscription.id;
 
-    // 5. Buscar URL de pagamento com até 3 tentativas
+    // 5. Buscar URL de pagamento com até 2 tentativas (máx 2s total)
     let invoiceUrl: string | null = null;
-    for (let attempt = 0; attempt < 3 && !invoiceUrl; attempt++) {
-      await new Promise(r => setTimeout(r, 2000)); // espera 2s entre tentativas
+    for (let attempt = 0; attempt < 2 && !invoiceUrl; attempt++) {
+      await new Promise(r => setTimeout(r, 1000));
       try {
         const payments = await asaasGet(`/subscriptions/${subscriptionId}/payments`);
         const first = payments?.data?.[0];

@@ -105,6 +105,7 @@ export default function PlanosPage() {
   const [modalPlano, setModalPlano] = useState<PlanoKey | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [cpfCnpjError, setCpfCnpjError] = useState('');
+  const [paymentSuccessData, setPaymentSuccessData] = useState<{plano: string; url: string} | null>(null);
 
   const planoAtual  = (empresa?.plano  ?? 'trial') as string;
   const statusAtual = (empresa?.status ?? 'ativo')  as string;
@@ -142,9 +143,6 @@ export default function PlanosPage() {
     }
     if (!empresa || !user || !modalPlano) return;
 
-    // ⚠️ Abrir janela AGORA (antes do await) — popup blockers bloqueiam após operações assíncronas
-    const paymentWindow = window.open('about:blank', '_blank');
-
     setLoading(modalPlano);
     setModalPlano(null);
 
@@ -162,30 +160,18 @@ export default function PlanosPage() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        paymentWindow?.close(); // fecha a aba em branco se deu erro
-        toast.error(data.error ?? 'Erro ao criar assinatura');
-        return;
-      }
-
-      // Redireciona a janela já aberta para a URL de pagamento
-      if (data.invoiceUrl && paymentWindow) {
-        paymentWindow.location.href = data.invoiceUrl;
-      } else {
-        paymentWindow?.close();
-      }
+      if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
       // Recarrega dados da empresa (novo status + invoiceUrl do banco)
       await refreshEmpresa();
 
-      toast.success(`Plano ${data.plano} — realize o pagamento para ativar! 🎉`);
-
-      // Recarrega a página após 2s para mostrar o banner de pagamento pendente
-      setTimeout(() => window.location.reload(), 2000);
+      // Mostra modal de sucesso com link de pagamento que o usuário clica
+      setPaymentSuccessData({
+        plano: data.plano,
+        url:   data.invoiceUrl ?? invoiceUrl ?? 'https://sandbox.asaas.com',
+      });
 
     } catch (err: any) {
-      paymentWindow?.close();
       toast.error(err.message ?? 'Erro de conexão');
     } finally {
       setLoading(null);
@@ -542,6 +528,52 @@ export default function PlanosPage() {
                 Confirmar e Assinar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de Sucesso + Link de Pagamento ── */}
+      {paymentSuccessData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] rounded-2xl p-7 shadow-2xl text-center">
+            {/* Ícone de sucesso */}
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-9 h-9 text-emerald-500" />
+            </div>
+
+            <h3 className="text-xl font-bold text-[rgb(var(--foreground))] mb-1">
+              Assinatura criada! 🎉
+            </h3>
+            <p className="text-sm text-[rgb(var(--muted-foreground))] mb-2">
+              Plano <strong className="text-orange-500">{paymentSuccessData.plano}</strong>
+            </p>
+            <p className="text-sm text-[rgb(var(--muted-foreground))] mb-6">
+              Clique no botão abaixo para abrir a página de pagamento do Asaas e finalizar sua assinatura.
+            </p>
+
+            {/* Botão principal — link nativo, sem window.open */}
+            <a
+              href={paymentSuccessData.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-emerald-500 text-white text-base font-bold hover:bg-emerald-600 transition-colors mb-3"
+              onClick={() => {
+                setTimeout(() => {
+                  setPaymentSuccessData(null);
+                  window.location.reload();
+                }, 500);
+              }}
+            >
+              <CreditCard className="w-5 h-5" />
+              Ir para o Asaas e Pagar
+            </a>
+
+            <button
+              onClick={() => { setPaymentSuccessData(null); window.location.reload(); }}
+              className="text-sm text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] transition-colors"
+            >
+              Pagar depois (o link ficará disponível no banner)
+            </button>
           </div>
         </div>
       )}
