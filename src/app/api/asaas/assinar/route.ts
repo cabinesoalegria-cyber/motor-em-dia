@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { asaasPost, asaasGet, asaasDelete, PLANOS, PlanoKey } from '@/lib/asaas';
 import { createClient } from '@supabase/supabase-js';
 
-// Usa service role se disponível, senão usa anon (RPC com SECURITY DEFINER bypassa RLS)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -11,13 +10,6 @@ const supabaseAdmin = createClient(
 /**
  * POST /api/asaas/assinar
  * Body: { empresaId, plano, nome, email, cpfCnpj? }
- *
- * Flow:
- *  1. Cria (ou reutiliza) cliente no Asaas
- *  2. Se já tem assinatura ativa → cancela a antiga (upgrade/troca)
- *  3. Cria nova assinatura mensal
- *  4. Atualiza empresa via RPC (bypassa RLS — funciona mesmo sem service role key)
- *  5. Retorna URL de pagamento da 1ª fatura
  */
 export async function POST(req: NextRequest) {
   try {
@@ -36,15 +28,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Buscar empresa
-    const { data: empresa, error: empresaErr } = await supabaseAdmin
+    const { data: empresa } = await supabaseAdmin
       .from('empresas')
       .select('asaas_customer_id, assinatura_id, plano')
       .eq('id', empresaId)
       .single();
-
-    if (empresaErr) {
-      console.error('[Asaas] Erro ao buscar empresa:', empresaErr);
-    }
 
     let customerId: string = empresa?.asaas_customer_id ?? '';
     const assinaturaAntigaId: string = empresa?.assinatura_id ?? '';
@@ -56,33 +44,34 @@ export async function POST(req: NextRequest) {
       if (cpfCnpj) customerBody.cpfCnpj = cpfCnpj.replace(/\D/g, '');
       const customer = await asaasPost('/customers', customerBody);
       customerId = customer.id;
-    } else {
-      // Garante que o CPF/CNPJ está atualizado no cliente existente
+    } else if (cpfCnpj) {
       try {
-        if (cpfCnpj) {
-          await asaasPost(`/customers/${customerId}`, {
-            name: nome,
-            email,
-            cpfCnpj: cpfCnpj.replace(/\D/g, ''),
-          });
-        }
-      } catch { /* ignora erro de update */ }
+        await fetch(
+          `${process.env.ASAAAS_BASE_URL}/customers/${customerId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': process.env.ASAAAS_API_KEY!,
+            },
+            body: JSON.stringify({ name: nome, email, cpfCnpj: cpfCnpj.replace(/\D/g, '') }),
+          }
+        );
+      } catch { /* ignora */ }
     }
 
-    // 3. Cancelar assinatura antiga se existir (upgrade/troca de plano)
+    // 3. Cancelar assinatura antiga (upgrade/troca)
     if (assinaturaAntigaId && planoAntigo !== 'trial') {
       try {
         await asaasDelete(`/subscriptions/${assinaturaAntigaId}`);
-        console.log(`[Asaas] Assinatura antiga ${assinaturaAntigaId} cancelada (${planoAntigo} → ${plano})`);
+        console.log(`[Asaas] Assinatura ${assinaturaAntigaId} cancelada (${planoAntigo} → ${plano})`);
       } catch (e) {
-        console.warn('[Asaas] Não foi possível cancelar assinatura antiga:', e);
+        console.warn('[Asaas] Aviso: não cancelou assinatura antiga:', e);
       }
     }
 
-    // 4. Data de vencimento = hoje (cobrança imediata)
+    // 4. Criar nova assinatura
     const dueDateStr = new Date().toISOString().split('T')[0];
-
-    // 5. Criar nova assinatura mensal
     const subscription = await asaasPost('/subscriptions', {
       customer:          customerId,
       billingType:       'UNDEFINED',
@@ -92,43 +81,48 @@ export async function POST(req: NextRequest) {
       description:       `Motor em Dia — Plano ${planoConfig.nome}`,
       externalReference: empresaId,
     });
-
     const subscriptionId: string = subscription.id;
 
-    // 6. Buscar URL de pagamento da 1ª fatura
+    // 5. Buscar URL de pagamento com até 3 tentativas
     let invoiceUrl: string | null = null;
-    try {
-      await new Promise(r => setTimeout(r, 1500)); // aguarda Asaas gerar a fatura
-      const payments = await asaasGet(`/subscriptions/${subscriptionId}/payments`);
-      if (payments?.data?.length > 0) {
-        invoiceUrl = payments.data[0].invoiceUrl
-          ?? payments.data[0].bankSlipUrl
-          ?? null;
-      }
-    } catch {
-      // Fatura ainda não gerada — ok
+    for (let attempt = 0; attempt < 3 && !invoiceUrl; attempt++) {
+      await new Promise(r => setTimeout(r, 2000)); // espera 2s entre tentativas
+      try {
+        const payments = await asaasGet(`/subscriptions/${subscriptionId}/payments`);
+        const first = payments?.data?.[0];
+        invoiceUrl = first?.invoiceUrl ?? first?.bankSlipUrl ?? null;
+      } catch { /* próxima tentativa */ }
     }
 
-    // 7. Atualizar empresa via RPC com SECURITY DEFINER (bypassa RLS)
+    // 6. Fallback: URL direto do painel Asaas sandbox / produção
+    const isSandbox = process.env.ASAAAS_SANDBOX === 'true';
+    const asaasPortalUrl = isSandbox
+      ? 'https://sandbox.asaas.com/customerAccount'
+      : 'https://asaas.com/customerAccount';
+    const finalInvoiceUrl = invoiceUrl ?? asaasPortalUrl;
+
+    // 7. Atualizar empresa via RPC (SECURITY DEFINER — bypassa RLS)
     const { error: rpcError } = await supabaseAdmin.rpc('atualizar_plano_empresa', {
-      p_empresa_id:       empresaId,
-      p_plano:            plano,
-      p_assinatura_id:    subscriptionId,
+      p_empresa_id:        empresaId,
+      p_plano:             plano,
+      p_assinatura_id:     subscriptionId,
       p_asaas_customer_id: customerId,
+      p_invoice_url:       finalInvoiceUrl,
     });
 
     if (rpcError) {
-      console.error('[Asaas] Erro ao atualizar plano via RPC:', rpcError);
-      // Tenta update direto como fallback
+      console.error('[Asaas] Erro RPC:', rpcError.message);
+      // Fallback direto — pendente_pagamento (NÃO ativo)
       await supabaseAdmin
         .from('empresas')
         .update({
-          assinatura_id:    subscriptionId,
+          assinatura_id:     subscriptionId,
           asaas_customer_id: customerId,
-          plano:            plano,
-          status:           'ativo',
-          trial_expira_em:  null,
-          inadimplente:     false,
+          asaas_invoice_url: finalInvoiceUrl,
+          plano,
+          status:            'pendente_pagamento',
+          trial_expira_em:   null,
+          inadimplente:      false,
         })
         .eq('id', empresaId);
     }
@@ -139,9 +133,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       subscriptionId,
-      invoiceUrl,
-      plano:      planoConfig.nome,
-      valor:      planoConfig.valor,
+      invoiceUrl:  finalInvoiceUrl,
+      plano:       planoConfig.nome,
+      valor:       planoConfig.valor,
       isUpgrade,
       planoAntigo,
     });

@@ -105,16 +105,17 @@ export default function PlanosPage() {
   const [modalPlano, setModalPlano] = useState<PlanoKey | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [cpfCnpjError, setCpfCnpjError] = useState('');
-  const [pendingInvoiceUrl, setPendingInvoiceUrl] = useState<string | null>(null);
 
-  const planoAtual   = (empresa?.plano   ?? 'trial') as string;
-  const statusAtual  = (empresa?.status  ?? 'ativo')  as string;
-  const isPending    = statusAtual === 'pendente_pagamento';
-  const isAtivo      = statusAtual === 'ativo';
-  const isTrial      = planoAtual === 'trial';
+  const planoAtual  = (empresa?.plano  ?? 'trial') as string;
+  const statusAtual = (empresa?.status ?? 'ativo')  as string;
+  const isPending   = statusAtual === 'pendente_pagamento';
+  const isAtivo     = statusAtual === 'ativo';
+  const isTrial     = planoAtual === 'trial';
   const hasActivePlan = ['starter', 'profissional', 'premium'].includes(planoAtual);
-  const currentPlan  = PLANOS.find(p => p.key === planoAtual);
-  const currentVal   = currentPlan?.valor ?? 0;
+  const currentPlan = PLANOS.find(p => p.key === planoAtual);
+  const currentVal  = currentPlan?.valor ?? 0;
+  // URL de pagamento vem do banco — persiste mesmo após reload
+  const invoiceUrl  = empresa?.asaasInvoiceUrl ?? null;
 
   function openModal(planoKey: PlanoKey) {
     // Block downgrade if current client count exceeds target plan limit
@@ -160,20 +161,18 @@ export default function PlanosPage() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
+      // Recarrega dados da empresa (pega o novo status + invoiceUrl do banco)
       await refreshEmpresa();
 
-      toast.success(`Assinatura do plano ${data.plano} criada! Aguardando pagamento. 🎉`);
+      toast.success(`Assinatura do plano ${data.plano} criada! Realize o pagamento para ativar. 🎉`);
 
+      // Abre a página de pagamento imediatamente
       if (data.invoiceUrl) {
-        setPendingInvoiceUrl(data.invoiceUrl);
-        toast.info('Clique em "Pagar agora" para concluir.', { duration: 5000 });
-        setTimeout(() => window.open(data.invoiceUrl, '_blank'), 1000);
-      } else {
-        toast.info('Acesse o Asaas para pagar sua fatura e ativar o plano.', { duration: 6000 });
+        setTimeout(() => window.open(data.invoiceUrl, '_blank'), 800);
       }
 
-      // Recarrega para mostrar o novo estado (pendente_pagamento)
-      setTimeout(() => window.location.reload(), 3000);
+      // Recarrega a página após 2s para mostrar o estado pendente
+      setTimeout(() => window.location.reload(), 2000);
 
     } catch (err: any) {
       toast.error(err.message ?? 'Erro de conexão');
@@ -227,7 +226,7 @@ export default function PlanosPage() {
               </div>
             </div>
             <a
-              href={pendingInvoiceUrl ?? 'https://sandbox.asaas.com'}
+              href={invoiceUrl ?? 'https://sandbox.asaas.com'}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-semibold rounded-xl hover:bg-yellow-600 transition-colors"
@@ -343,7 +342,7 @@ export default function PlanosPage() {
                 <div className={cn('w-full py-3 rounded-xl text-center text-sm font-semibold', c.bg, c.text)}>✓ Plano Ativo</div>
               ) : isAtual && isPending ? (
                 <a
-                  href={pendingInvoiceUrl ?? 'https://sandbox.asaas.com'}
+                  href={invoiceUrl ?? 'https://sandbox.asaas.com'}
                   target="_blank" rel="noopener noreferrer"
                   className="w-full py-3 rounded-xl text-center text-sm font-semibold bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors block"
                 >

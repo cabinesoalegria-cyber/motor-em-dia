@@ -13,13 +13,14 @@ export interface Empresa {
   cidade: string;
   cnpj: string;
   plano: string; // 'trial' | 'starter' | 'profissional' | 'premium'
-  status: string; // 'ativo' | 'inativo'
+  status: string; // 'ativo' | 'pendente_pagamento' | 'inadimplente' | 'inativo'
   trialExpiraEm: string | null;
   logoUrl: string | null;
   telefone: string;
   endereco: string;
   onboardingCompleto: boolean;
   createdAt: string;
+  asaasInvoiceUrl: string | null; // URL de pagamento pendente
 }
 
 export interface UsuarioInfo {
@@ -103,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         endereco: empresaData.endereco || '',
         onboardingCompleto: empresaData.onboarding_completo || false,
         createdAt: empresaData.created_at,
+        asaasInvoiceUrl: empresaData.asaas_invoice_url || null,
       });
     }
   }
