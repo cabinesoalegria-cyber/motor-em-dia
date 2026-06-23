@@ -160,18 +160,24 @@ export default function PlanosPage() {
       });
 
       const data = await res.json();
+      console.log('[Asaas/assinar] resposta:', JSON.stringify(data, null, 2));
+
       if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
       // Recarrega dados da empresa (novo status + invoiceUrl do banco)
       await refreshEmpresa();
 
+      const finalUrl = data.invoiceUrl ?? invoiceUrl ?? 'https://sandbox.asaas.com';
+      console.log('[Asaas] invoiceUrl final:', finalUrl);
+
       // Mostra modal de sucesso com link de pagamento que o usuário clica
       setPaymentSuccessData({
-        plano: data.plano,
-        url:   data.invoiceUrl ?? invoiceUrl ?? 'https://sandbox.asaas.com',
+        plano: data.plano ?? modalPlano ?? 'Selecionado',
+        url:   finalUrl,
       });
 
     } catch (err: any) {
+      console.error('[Asaas] erro:', err);
       toast.error(err.message ?? 'Erro de conexão');
     } finally {
       setLoading(null);

@@ -5,7 +5,7 @@
 export const PLAN_LIMITS = {
   trial: {
     label: 'Trial Gratuito',
-    clientes: 20,
+    clientes: 30,
     ordens: Infinity,   // sem limite no trial
     pecas: Infinity,
     backup: false,
