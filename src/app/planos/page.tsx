@@ -105,12 +105,16 @@ export default function PlanosPage() {
   const [modalPlano, setModalPlano] = useState<PlanoKey | null>(null);
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [cpfCnpjError, setCpfCnpjError] = useState('');
+  const [pendingInvoiceUrl, setPendingInvoiceUrl] = useState<string | null>(null);
 
-  const planoAtual = (empresa?.plano ?? 'trial') as string;
-  const isTrial = planoAtual === 'trial';
+  const planoAtual   = (empresa?.plano   ?? 'trial') as string;
+  const statusAtual  = (empresa?.status  ?? 'ativo')  as string;
+  const isPending    = statusAtual === 'pendente_pagamento';
+  const isAtivo      = statusAtual === 'ativo';
+  const isTrial      = planoAtual === 'trial';
   const hasActivePlan = ['starter', 'profissional', 'premium'].includes(planoAtual);
-  const currentPlan = PLANOS.find(p => p.key === planoAtual);
-  const currentVal = currentPlan?.valor ?? 0;
+  const currentPlan  = PLANOS.find(p => p.key === planoAtual);
+  const currentVal   = currentPlan?.valor ?? 0;
 
   function openModal(planoKey: PlanoKey) {
     // Block downgrade if current client count exceeds target plan limit
@@ -156,25 +160,20 @@ export default function PlanosPage() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
-      // Atualiza dados locais E força reload da página para garantir que o novo plano apareça
       await refreshEmpresa();
 
-      if (data.isUpgrade) {
-        toast.success(`Upgrade para ${data.plano} realizado! Assinatura anterior cancelada. 🎉`);
-      } else {
-        toast.success(`Plano ${data.plano} ativado com sucesso! 🎉`);
-      }
+      toast.success(`Assinatura do plano ${data.plano} criada! Aguardando pagamento. 🎉`);
 
       if (data.invoiceUrl) {
-        toast.info('Abrindo página de pagamento do Asaas...', { duration: 3000 });
-        setTimeout(() => {
-          window.open(data.invoiceUrl, '_blank');
-          window.location.reload(); // garante UI atualizada
-        }, 1500);
+        setPendingInvoiceUrl(data.invoiceUrl);
+        toast.info('Clique em "Pagar agora" para concluir.', { duration: 5000 });
+        setTimeout(() => window.open(data.invoiceUrl, '_blank'), 1000);
       } else {
-        toast.info('Acesse o Asaas para acompanhar sua fatura.', { duration: 4000 });
-        setTimeout(() => window.location.reload(), 2000);
+        toast.info('Acesse o Asaas para pagar sua fatura e ativar o plano.', { duration: 6000 });
       }
+
+      // Recarrega para mostrar o novo estado (pendente_pagamento)
+      setTimeout(() => window.location.reload(), 3000);
 
     } catch (err: any) {
       toast.error(err.message ?? 'Erro de conexão');
@@ -210,8 +209,37 @@ export default function PlanosPage() {
         </div>
       </div>
 
-      {/* Current plan highlight (when subscribed) */}
-      {hasActivePlan && currentPlan && (
+      {/* Pending payment banner */}
+      {isPending && hasActivePlan && currentPlan && (
+        <div className="rounded-2xl border-2 border-yellow-500/50 bg-yellow-500/10 p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <CreditCard className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <p className="font-bold text-yellow-700 dark:text-yellow-300">
+                  ⏳ Pagamento pendente — Plano {currentPlan.nome}
+                </p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                  Seu plano ficará ativo assim que o pagamento for confirmado pelo Asaas.
+                </p>
+              </div>
+            </div>
+            <a
+              href={pendingInvoiceUrl ?? 'https://sandbox.asaas.com'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-semibold rounded-xl hover:bg-yellow-600 transition-colors"
+            >
+              <CreditCard className="w-4 h-4" /> Pagar agora
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Current plan highlight (when active) */}
+      {hasActivePlan && isAtivo && currentPlan && (
         <div className={cn('rounded-2xl p-5 border-2 flex items-center gap-4', COR[currentPlan.cor].border, 'bg-[rgb(var(--card))]')}>
           <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0', COR[currentPlan.cor].bg)}>
             <currentPlan.icone className={cn('w-6 h-6', COR[currentPlan.cor].text)} />
@@ -227,8 +255,8 @@ export default function PlanosPage() {
         </div>
       )}
 
-      {/* Downgrade warning */}
-      {hasActivePlan && (
+      {/* Downgrade warning — only when truly active */}
+      {hasActivePlan && isAtivo && (
         <div className="rounded-xl bg-[rgb(var(--muted))] border border-[rgb(var(--card-border))] p-4 text-sm text-[rgb(var(--muted-foreground))] flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
           <span>
@@ -311,8 +339,16 @@ export default function PlanosPage() {
                 ))}
               </ul>
 
-              {isAtual ? (
+              {isAtual && isAtivo ? (
                 <div className={cn('w-full py-3 rounded-xl text-center text-sm font-semibold', c.bg, c.text)}>✓ Plano Ativo</div>
+              ) : isAtual && isPending ? (
+                <a
+                  href={pendingInvoiceUrl ?? 'https://sandbox.asaas.com'}
+                  target="_blank" rel="noopener noreferrer"
+                  className="w-full py-3 rounded-xl text-center text-sm font-semibold bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors block"
+                >
+                  ⏳ Aguardando pagamento — Pagar agora
+                </a>
               ) : blocked ? (
                 <div className="w-full py-3 rounded-xl text-center text-sm font-semibold bg-red-500/10 text-red-500">
                   {clientes.length} clientes · limite {targetLimit}

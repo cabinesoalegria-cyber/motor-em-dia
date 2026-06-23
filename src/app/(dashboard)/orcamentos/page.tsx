@@ -249,15 +249,20 @@ export default function OrcamentosPage() {
 
   function saveEdit(oId: string) {
     const editValorTotal = editItens.reduce((s, i) => s + i.valorTotal, 0);
+    // Se o orçamento estava aprovado, reabre (volta para pendente e desvincula OS)
+    const orc = orcamentos.find(o => o.id === oId);
+    const wasApproved = orc?.status === 'aprovado';
     updateOrcamento(oId, {
-      clienteId: editClienteId,
-      veiculoId: editVeiculoId,
-      validade: editValidade,
-      observacoes: editObservacoes,
-      itens: editItens,
-      valorTotal: editValorTotal,
+      clienteId:      editClienteId,
+      veiculoId:      editVeiculoId,
+      validade:       editValidade,
+      observacoes:    editObservacoes,
+      itens:          editItens,
+      valorTotal:     editValorTotal,
+      // Reabrir: reseta status e desvincula a OS anterior
+      ...(wasApproved ? { status: 'pendente' as const, ordemServicoId: null } : {}),
     });
-    toast.success('Orçamento atualizado!');
+    toast.success(wasApproved ? 'Orçamento reaberto! Aprove novamente para criar uma nova OS.' : 'Orçamento atualizado!');
     setEditingId(null);
   }
 
@@ -481,12 +486,13 @@ ${o.observacoes ? `<div class="obs"><strong>Problema Relatado pelo Cliente:</str
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[rgb(var(--card-border))] flex-wrap">
-                  {o.ordemServicoId ? (
+                  {/* OS já gerada e vinculada */}
+                  {o.ordemServicoId && o.status === 'aprovado' ? (
                     <Link href={`/ordens/${o.ordemServicoId}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-colors">
                       <ArrowRight className="w-3.5 h-3.5" /> Ver OS Gerada
                     </Link>
-                  ) : o.status === 'pendente' ? (
+                  ) : (o.status === 'pendente' || (o.status === 'aprovado' && !o.ordemServicoId)) ? (
                     <>
                       <button onClick={async () => {
                         try {
@@ -500,10 +506,12 @@ ${o.observacoes ? `<div class="obs"><strong>Problema Relatado pelo Cliente:</str
                       }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar e Criar OS
                       </button>
-                      <button onClick={() => { updateOrcamento(o.id, { status: 'recusado' }); toast.info('Orçamento recusado'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
-                        <XCircle className="w-3.5 h-3.5" /> Recusar
-                      </button>
+                      {o.status === 'pendente' && (
+                        <button onClick={() => { updateOrcamento(o.id, { status: 'recusado' }); toast.info('Orçamento recusado'); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
+                          <XCircle className="w-3.5 h-3.5" /> Recusar
+                        </button>
+                      )}
                     </>
                   ) : null}
                   <button onClick={() => handleSendWhatsApp(o)}
