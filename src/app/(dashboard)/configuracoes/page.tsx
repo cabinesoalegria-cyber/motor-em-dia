@@ -9,10 +9,13 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
 import Link from 'next/link';
+import { getPlanLimits } from '@/lib/planos';
 
 export default function ConfiguracoesPage() {
   const { theme, toggleTheme } = useTheme();
   const { empresa, refreshEmpresa } = useAuth();
+  const planLimits = getPlanLimits(empresa?.plano ?? 'trial');
+  const isTrial = empresa?.plano === 'trial';
   const {
     clientes, veiculos, ordens, pecas, lancamentos, agendamentos, orcamentos,
     addCliente, addVeiculo, addOrdem, addPeca, addLancamento, addAgendamento, addOrcamento,
@@ -555,7 +558,21 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* ── EXPORTAR / BACKUP ──────────────── */}
-      <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+      <div className={cn('rounded-2xl p-5 border relative', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+        {!planLimits.backup && (
+          <div className="absolute inset-0 z-10 rounded-2xl bg-[rgb(var(--card))]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center">
+              <Lock className="w-6 h-6 text-orange-500" />
+            </div>
+            <div className="text-center px-6">
+              <p className="font-bold text-[rgb(var(--foreground))] text-sm">Backup indisponível no {isTrial ? 'Trial' : 'Plano Starter'}</p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-1">Disponível a partir do Plano Profissional</p>
+            </div>
+            <a href="/planos" className="px-4 py-2 bg-orange-500 text-white text-xs font-semibold rounded-xl hover:bg-orange-600 transition-colors">
+              Ver Planos
+            </a>
+          </div>
+        )}
         <div className="flex items-center gap-2 mb-1">
           <Download className="w-4 h-4 text-emerald-500" />
           <h3 className="font-semibold text-[rgb(var(--foreground))]">Exportar / Backup</h3>
@@ -662,7 +679,7 @@ export default function ConfiguracoesPage() {
                   ⚠️ Pagamento pendente
                 </span>
               )}
-              {expira && (
+              {expira && isTrial && (
                 <span className={cn(
                   'text-xs font-medium px-2.5 py-1 rounded-full',
                   expirado            ? 'bg-red-500/10 text-red-500' :
@@ -675,7 +692,7 @@ export default function ConfiguracoesPage() {
               )}
             </div>
 
-            {expira && (
+            {expira && isTrial && (
               <p className="text-sm text-[rgb(var(--muted-foreground))] mb-4">
                 <span className="font-medium text-[rgb(var(--foreground))]">Trial expira em: </span>
                 {expira.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}

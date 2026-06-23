@@ -4,14 +4,20 @@ import { useState, useMemo, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { Cliente } from '@/lib/types';
 import { formatPhone, formatDate, cn } from '@/lib/utils';
-import { Search, Plus, Edit2, Trash2, Car, FileText, MessageSquare, X, Upload } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Car, FileText, MessageSquare, X, Upload, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth-context';
+import { getPlanLimits } from '@/lib/planos';
 import { ClienteModal } from './cliente-modal';
 import * as XLSX from 'xlsx';
 
 export default function ClientesPage() {
   const { clientes, veiculos, ordens, deleteCliente, addCliente } = useStore();
+  const { empresa } = useAuth();
+  const limits = getPlanLimits(empresa?.plano ?? 'trial');
+  const atLimit = clientes.length >= limits.clientes;
+  const nearLimit = !atLimit && clientes.length >= limits.clientes - 2;
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
@@ -81,12 +87,59 @@ export default function ClientesPage() {
   }
 
   function handleNew() {
+    if (atLimit) {
+      toast.error(`Limite de ${limits.clientes} clientes atingido. Faça upgrade do plano para cadastrar mais.`);
+      return;
+    }
     setEditingCliente(null);
     setModalOpen(true);
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
+      {/* Plan limit banner */}
+      {limits.clientes !== Infinity && (
+        <div className={cn(
+          'rounded-2xl p-4 border flex items-center justify-between gap-3',
+          atLimit
+            ? 'bg-red-500/10 border-red-500/30'
+            : nearLimit
+            ? 'bg-orange-500/10 border-orange-500/30'
+            : 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]'
+        )}>
+          <div className="flex items-center gap-3">
+            {atLimit && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />}
+            <div>
+              <p className={cn('text-sm font-semibold', atLimit ? 'text-red-500' : nearLimit ? 'text-orange-500' : 'text-[rgb(var(--foreground))]')}>
+                {atLimit ? 'Limite de clientes atingido!' : `Clientes cadastrados: ${clientes.length} / ${limits.clientes}`}
+              </p>
+              {atLimit && (
+                <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">
+                  Faça upgrade do plano para cadastrar mais clientes.
+                </p>
+              )}
+            </div>
+          </div>
+          {/* progress bar */}
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+            <div className="w-32 h-2 rounded-full bg-[rgb(var(--muted))] overflow-hidden">
+              <div
+                className={cn('h-full rounded-full transition-all', atLimit ? 'bg-red-500' : nearLimit ? 'bg-orange-500' : 'bg-emerald-500')}
+                style={{ width: `${Math.min(100, (clientes.length / limits.clientes) * 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono text-[rgb(var(--muted-foreground))]">
+              {clientes.length}/{limits.clientes}
+            </span>
+          </div>
+          {atLimit && (
+            <a href="/planos" className="flex-shrink-0 px-3 py-1.5 bg-orange-500 text-white text-xs font-semibold rounded-lg hover:bg-orange-600 transition-colors">
+              Ver Planos
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1">
@@ -129,7 +182,14 @@ export default function ClientesPage() {
         />
         <button
           onClick={handleNew}
-          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors shadow-sm flex-shrink-0"
+          disabled={atLimit}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm flex-shrink-0',
+            atLimit
+              ? 'bg-[rgb(var(--muted))] text-[rgb(var(--muted-foreground))] cursor-not-allowed'
+              : 'bg-orange-500 text-white hover:bg-orange-600'
+          )}
+          title={atLimit ? `Limite de ${limits.clientes} clientes atingido` : 'Novo cliente'}
         >
           <Plus className="w-4 h-4" />
           Novo Cliente
