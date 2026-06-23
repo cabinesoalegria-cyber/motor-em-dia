@@ -18,6 +18,16 @@ const supabaseAdmin = createClient(
  */
 export async function POST(req: NextRequest) {
   try {
+    // Validate Asaas authentication token
+    const webhookToken = process.env.ASAAAS_WEBHOOK_TOKEN;
+    if (webhookToken) {
+      const authHeader = req.headers.get('asaas-access-token') ?? req.headers.get('authorization') ?? '';
+      if (authHeader !== webhookToken) {
+        console.warn('[Asaas webhook] Token inválido recebido:', authHeader?.slice(0, 10));
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const event = await req.json();
     console.log('[Asaas webhook]', event.event, event.payment?.id ?? event.subscription?.id);
 

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Crown, Check, Loader2, Zap, Star,
-  CreditCard, ArrowLeft, ShieldCheck, RefreshCw,
+  CreditCard, ArrowLeft, ShieldCheck, RefreshCw, X, User,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -73,26 +73,68 @@ const COR: Record<string, { bg: string; text: string; border: string; btn: strin
   purple:  { bg: 'bg-purple-500/10',  text: 'text-purple-500',  border: 'border-purple-500',  btn: 'bg-purple-500 hover:bg-purple-600',   badge: 'bg-purple-500/15 text-purple-600' },
 };
 
+const inputCn = cn(
+  'w-full px-3 py-3 rounded-xl text-sm border',
+  'bg-[rgb(var(--input-bg))] border-[rgb(var(--input-border))]',
+  'text-[rgb(var(--foreground))] placeholder:text-[rgb(var(--muted-foreground))]',
+  'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-colors'
+);
+
+function formatCpfCnpj(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
 export default function PlanosPage() {
   const { empresa, user, refreshEmpresa } = useAuth();
   const [loading, setLoading] = useState<string | null>(null);
 
+  // Modal state
+  const [modalPlano, setModalPlano] = useState<string | null>(null);
+  const [cpfCnpj, setCpfCnpj] = useState('');
+  const [cpfCnpjError, setCpfCnpjError] = useState('');
+
   const planoAtual = empresa?.plano ?? 'trial';
 
-  async function assinar(planoKey: string) {
-    if (!empresa || !user) { toast.error('Faça login novamente'); return; }
+  function openModal(planoKey: string) {
+    // Pre-fill if empresa already has CPF/CNPJ
+    const existing = (empresa as any)?.cnpj ?? (empresa as any)?.cpfCnpj ?? '';
+    setCpfCnpj(existing ? formatCpfCnpj(existing) : '');
+    setCpfCnpjError('');
+    setModalPlano(planoKey);
+  }
 
-    setLoading(planoKey);
+  async function confirmarAssinatura() {
+    const digits = cpfCnpj.replace(/\D/g, '');
+    if (digits.length !== 11 && digits.length !== 14) {
+      setCpfCnpjError('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido');
+      return;
+    }
+    if (!empresa || !user || !modalPlano) return;
+
+    setLoading(modalPlano);
+    setModalPlano(null);
+
     try {
       const res = await fetch('/api/asaas/assinar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           empresaId: empresa.id,
-          plano: planoKey,
+          plano: modalPlano,
           nome: empresa.nome,
           email: user.email,
-          cpfCnpj: (empresa as any).cnpj ?? '',
+          cpfCnpj: digits,
         }),
       });
 
@@ -104,10 +146,10 @@ export default function PlanosPage() {
       }
 
       await refreshEmpresa();
-      toast.success(`Plano ${planoKey} ativado com 14 dias grátis! 🎉`);
+      toast.success(`Plano ${modalPlano} ativado com 14 dias grátis! 🎉`);
 
       if (data.invoiceUrl) {
-        toast.info('Abrindo página de pagamento...', { duration: 3000 });
+        toast.info('Abrindo página de pagamento do Asaas...', { duration: 3000 });
         setTimeout(() => window.open(data.invoiceUrl, '_blank'), 1500);
       }
 
@@ -133,7 +175,6 @@ export default function PlanosPage() {
           Escolha o plano ideal para sua oficina.{' '}
           <strong className="text-orange-500">14 dias grátis</strong> em todos os planos.
         </p>
-
         <div className="flex flex-wrap justify-center gap-4 pt-2">
           {[
             { icon: ShieldCheck, label: 'Pagamento seguro via Asaas' },
@@ -209,7 +250,7 @@ export default function PlanosPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => assinar(plano.key)}
+                  onClick={() => openModal(plano.key)}
                   disabled={!!loading}
                   className={cn(
                     'w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors',
@@ -248,8 +289,71 @@ export default function PlanosPage() {
       {/* Sandbox notice */}
       <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm text-yellow-700 dark:text-yellow-400">
         <strong>🧪 Modo Sandbox Ativo:</strong> Nenhuma cobrança real será feita.
-        <br />Cartão de teste Asaas: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">5162 3062 3062 3062</code> · CVV: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">318</code> · Validade: qualquer data futura.
+        <br />Cartão de teste: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">5162 3062 3062 3062</code> · CVV: <code className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded">318</code> · Validade: qualquer data futura.
       </div>
+
+      {/* ── CPF/CNPJ Modal ── */}
+      {modalPlano && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setModalPlano(null)}>
+          <div className="w-full max-w-sm bg-[rgb(var(--card))] border border-[rgb(var(--card-border))] rounded-2xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                  <User className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[rgb(var(--foreground))]">Identificação</h3>
+                  <p className="text-xs text-[rgb(var(--muted-foreground))]">Exigido pelo Asaas para emissão de cobranças</p>
+                </div>
+              </div>
+              <button onClick={() => setModalPlano(null)} className="p-1.5 rounded-lg text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] hover:bg-[rgb(var(--muted))]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Plan summary */}
+            <div className="mb-5 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <p className="text-sm text-orange-500 font-semibold">
+                Plano {PLANOS.find(p => p.key === modalPlano)?.nome} — R$ {PLANOS.find(p => p.key === modalPlano)?.valor}/mês
+              </p>
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">✅ 14 dias grátis · Primeira cobrança só no 15º dia</p>
+            </div>
+
+            {/* CPF/CNPJ input */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">CPF ou CNPJ da oficina</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                value={cpfCnpj}
+                onChange={e => {
+                  setCpfCnpjError('');
+                  setCpfCnpj(formatCpfCnpj(e.target.value));
+                }}
+                className={cn(inputCn, cpfCnpjError ? 'border-red-500 focus:ring-red-500/40' : '')}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') confirmarAssinatura(); }}
+              />
+              {cpfCnpjError && <p className="text-xs text-red-500 mt-1">{cpfCnpjError}</p>}
+              <p className="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                Usado apenas para emissão de cobrança pelo Asaas. Seus dados são protegidos.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button onClick={() => setModalPlano(null)} className="flex-1 py-3 rounded-xl border border-[rgb(var(--card-border))] text-sm text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--muted))] transition-colors">
+                Cancelar
+              </button>
+              <button onClick={confirmarAssinatura} className="flex-1 py-3 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors">
+                Confirmar e Assinar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
