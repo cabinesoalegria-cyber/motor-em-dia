@@ -634,50 +634,63 @@ export default function ConfiguracoesPage() {
         const expira = empresa.trialExpiraEm ? new Date(empresa.trialExpiraEm) : null;
         const diasRestantes = expira ? Math.max(0, Math.ceil((expira.getTime() - Date.now()) / 86400000)) : null;
         const expirado = diasRestantes !== null && diasRestantes === 0;
+        const inadimplente = (empresa as any).inadimplente;
+
+        const planoLabel: Record<string, string> = {
+          trial: 'Trial Gratuito', starter: 'Starter', profissional: 'Profissional', premium: 'Premium',
+        };
+        const planoCor: Record<string, string> = {
+          trial: 'bg-orange-500/15 text-orange-500',
+          starter: 'bg-emerald-500/15 text-emerald-600',
+          profissional: 'bg-blue-500/15 text-blue-600',
+          premium: 'bg-purple-500/15 text-purple-600',
+        };
+
         return (
           <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
             <div className="flex items-center gap-2 mb-4">
               <Crown className="w-4 h-4 text-yellow-500" />
               <h3 className="font-semibold text-[rgb(var(--foreground))]">Plano Atual</h3>
             </div>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className={cn(
-                'px-3 py-1 rounded-xl text-sm font-bold capitalize',
-                empresa.plano === 'premium'      ? 'bg-purple-500/15 text-purple-500' :
-                empresa.plano === 'profissional' ? 'bg-blue-500/15 text-blue-500' :
-                empresa.plano === 'starter'      ? 'bg-emerald-500/15 text-emerald-500' :
-                'bg-orange-500/15 text-orange-500'
-              )}>
-                {empresa.plano === 'trial' ? 'Trial Gratuito' : empresa.plano}
+
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <span className={cn('px-3 py-1 rounded-xl text-sm font-bold capitalize', planoCor[empresa.plano] ?? 'bg-orange-500/15 text-orange-500')}>
+                {planoLabel[empresa.plano] ?? empresa.plano}
               </span>
+              {inadimplente && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-500/10 text-red-500">
+                  ⚠️ Pagamento pendente
+                </span>
+              )}
               {expira && (
                 <span className={cn(
                   'text-xs font-medium px-2.5 py-1 rounded-full',
-                  expirado ? 'bg-red-500/10 text-red-500' :
-                  diasRestantes! <= 5 ? 'bg-red-500/10 text-red-500' :
+                  expirado            ? 'bg-red-500/10 text-red-500' :
+                  diasRestantes! <= 5  ? 'bg-red-500/10 text-red-500' :
                   diasRestantes! <= 10 ? 'bg-orange-500/10 text-orange-500' :
                   'bg-slate-500/10 text-[rgb(var(--muted-foreground))]'
                 )}>
-                  {expirado ? 'Expirado' : `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
+                  {expirado ? 'Trial expirado' : `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''} de trial restante${diasRestantes !== 1 ? 's' : ''}`}
                 </span>
               )}
             </div>
+
             {expira && (
-              <div className="text-sm text-[rgb(var(--muted-foreground))] mb-4">
-                <span className="font-medium text-[rgb(var(--foreground))]">Expira em: </span>
+              <p className="text-sm text-[rgb(var(--muted-foreground))] mb-4">
+                <span className="font-medium text-[rgb(var(--foreground))]">Trial expira em: </span>
                 {expira.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-              </div>
+              </p>
             )}
-            {empresa.plano === 'trial' && (
-              <Link href="/planos"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors"
-              >
-                <Crown className="w-4 h-4" /> Assinar um Plano
-              </Link>
-            )}
+
+            <Link href="/planos"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors">
+              <Crown className="w-4 h-4" />
+              {empresa.plano === 'trial' || expirado ? 'Assinar um Plano' : 'Ver Planos / Mudar Plano'}
+            </Link>
           </div>
         );
       })()}
+
 
       {/* About */}
       <div className={cn('rounded-2xl p-5 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>

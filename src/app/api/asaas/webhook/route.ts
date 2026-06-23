@@ -1,0 +1,109 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
+
+/**
+ * POST /api/asaas/webhook
+ *
+ * Recebe notificações do Asaas e atualiza o status do plano da empresa.
+ *
+ * Eventos relevantes:
+ *  - PAYMENT_CONFIRMED / PAYMENT_RECEIVED → ativa plano
+ *  - PAYMENT_OVERDUE                       → marca como inadimplente
+ *  - SUBSCRIPTION_CANCELLED               → cancela plano
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const event = await req.json();
+    console.log('[Asaas webhook]', event.event, event.payment?.id ?? event.subscription?.id);
+
+    const eventType: string = event.event ?? '';
+    const payment   = event.payment;
+    const subscription = event.subscription;
+
+    // Helper: buscar empresa pelo assinatura_id ou externalReference
+    async function findEmpresa(assinaturaId?: string, externalRef?: string) {
+      if (assinaturaId) {
+        const { data } = await supabaseAdmin
+          .from('empresas')
+          .select('id, plano, status')
+          .eq('assinatura_id', assinaturaId)
+          .single();
+        if (data) return data;
+      }
+      if (externalRef) {
+        const { data } = await supabaseAdmin
+          .from('empresas')
+          .select('id, plano, status')
+          .eq('id', externalRef)
+          .single();
+        if (data) return data;
+      }
+      return null;
+    }
+
+    if (eventType === 'PAYMENT_CONFIRMED' || eventType === 'PAYMENT_RECEIVED') {
+      const assinaturaId = payment?.subscription;
+      const externalRef  = payment?.externalReference;
+      const empresa = await findEmpresa(assinaturaId, externalRef);
+
+      if (empresa) {
+        // Calcular próxima expiração (30 dias)
+        const planoExpira = new Date();
+        planoExpira.setDate(planoExpira.getDate() + 30);
+
+        await supabaseAdmin
+          .from('empresas')
+          .update({
+            status: 'ativo',
+            plano_expira_em: planoExpira.toISOString(),
+            inadimplente: false,
+          })
+          .eq('id', empresa.id);
+
+        console.log(`[Webhook] Empresa ${empresa.id} → ATIVO após pagamento confirmado`);
+      }
+    }
+
+    else if (eventType === 'PAYMENT_OVERDUE') {
+      const assinaturaId = payment?.subscription;
+      const externalRef  = payment?.externalReference;
+      const empresa = await findEmpresa(assinaturaId, externalRef);
+
+      if (empresa) {
+        await supabaseAdmin
+          .from('empresas')
+          .update({ inadimplente: true })
+          .eq('id', empresa.id);
+
+        console.log(`[Webhook] Empresa ${empresa.id} → INADIMPLENTE`);
+      }
+    }
+
+    else if (eventType === 'SUBSCRIPTION_CANCELLED' || eventType === 'SUBSCRIPTION_DELETED') {
+      const assinaturaId = subscription?.id;
+      const empresa = await findEmpresa(assinaturaId);
+
+      if (empresa) {
+        await supabaseAdmin
+          .from('empresas')
+          .update({ status: 'inativo', plano: 'trial', assinatura_id: null })
+          .eq('id', empresa.id);
+
+        console.log(`[Webhook] Empresa ${empresa.id} → CANCELADO`);
+      }
+    }
+
+    // Sempre retornar 200 para o Asaas
+    return NextResponse.json({ received: true });
+
+  } catch (err: any) {
+    console.error('[Asaas webhook error]', err);
+    // Retornar 200 mesmo em erro para evitar retentativas desnecessárias
+    return NextResponse.json({ received: true, warning: err.message });
+  }
+}
