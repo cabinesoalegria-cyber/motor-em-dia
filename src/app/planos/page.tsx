@@ -142,6 +142,9 @@ export default function PlanosPage() {
     }
     if (!empresa || !user || !modalPlano) return;
 
+    // ⚠️ Abrir janela AGORA (antes do await) — popup blockers bloqueiam após operações assíncronas
+    const paymentWindow = window.open('about:blank', '_blank');
+
     setLoading(modalPlano);
     setModalPlano(null);
 
@@ -151,30 +154,38 @@ export default function PlanosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           empresaId: empresa.id,
-          plano: modalPlano,
-          nome: empresa.nome,
-          email: user.email,
-          cpfCnpj: digits,
+          plano:     modalPlano,
+          nome:      empresa.nome,
+          email:     user.email,
+          cpfCnpj:   digits,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
-      // Recarrega dados da empresa (pega o novo status + invoiceUrl do banco)
-      await refreshEmpresa();
-
-      toast.success(`Assinatura do plano ${data.plano} criada! Realize o pagamento para ativar. 🎉`);
-
-      // Abre a página de pagamento imediatamente
-      if (data.invoiceUrl) {
-        setTimeout(() => window.open(data.invoiceUrl, '_blank'), 800);
+      if (!res.ok) {
+        paymentWindow?.close(); // fecha a aba em branco se deu erro
+        toast.error(data.error ?? 'Erro ao criar assinatura');
+        return;
       }
 
-      // Recarrega a página após 2s para mostrar o estado pendente
+      // Redireciona a janela já aberta para a URL de pagamento
+      if (data.invoiceUrl && paymentWindow) {
+        paymentWindow.location.href = data.invoiceUrl;
+      } else {
+        paymentWindow?.close();
+      }
+
+      // Recarrega dados da empresa (novo status + invoiceUrl do banco)
+      await refreshEmpresa();
+
+      toast.success(`Plano ${data.plano} — realize o pagamento para ativar! 🎉`);
+
+      // Recarrega a página após 2s para mostrar o banner de pagamento pendente
       setTimeout(() => window.location.reload(), 2000);
 
     } catch (err: any) {
+      paymentWindow?.close();
       toast.error(err.message ?? 'Erro de conexão');
     } finally {
       setLoading(null);
