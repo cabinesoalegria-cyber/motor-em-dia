@@ -187,7 +187,7 @@ export interface Orcamento {
   validade: string; // ISO date
   status: 'pendente' | 'aprovado' | 'recusado' | 'expirado';
   observacoes?: string;
-  ordemServicoId?: string; // se foi convertido em OS
+  ordemServicoId?: string | null; // se foi convertido em OS
   createdAt: string;
   updatedAt: string;
 }
