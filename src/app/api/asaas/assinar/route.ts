@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { asaasPost, asaasGet, PLANOS, PlanoKey } from '@/lib/asaas';
+import { asaasPost, asaasGet, asaasDelete, PLANOS, PlanoKey } from '@/lib/asaas';
 import { createClient } from '@supabase/supabase-js';
 
-// Server-side Supabase client (service role not needed; use anon + RLS bypass via service role if available)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -14,8 +13,9 @@ const supabaseAdmin = createClient(
  *
  * Flow:
  *  1. Cria (ou reutiliza) cliente no Asaas
- *  2. Cria assinatura mensal com trial de 14 dias
- *  3. Retorna a URL de pagamento da 1ª fatura (após o trial)
+ *  2. Se já tem assinatura ativa → cancela a antiga (upgrade/troca)
+ *  3. Cria nova assinatura mensal
+ *  4. Retorna URL de pagamento da 1ª fatura
  */
 export async function POST(req: NextRequest) {
   try {
@@ -30,14 +30,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Plano inválido: ${plano}` }, { status: 400 });
     }
 
-    // 1. Buscar empresa para ver se já tem asaas_customer_id
+    // 1. Buscar empresa
     const { data: empresa } = await supabaseAdmin
       .from('empresas')
-      .select('asaas_customer_id, assinatura_id')
+      .select('asaas_customer_id, assinatura_id, plano')
       .eq('id', empresaId)
       .single();
 
     let customerId: string = empresa?.asaas_customer_id ?? '';
+    const assinaturaAntigaId: string = empresa?.assinatura_id ?? '';
+    const planoAntigo: string = empresa?.plano ?? 'trial';
 
     // 2. Criar cliente no Asaas se ainda não existe
     if (!customerId) {
@@ -47,21 +49,31 @@ export async function POST(req: NextRequest) {
       const customer = await asaasPost('/customers', customerBody);
       customerId = customer.id;
 
-      // Salvar o customer ID na empresa
       await supabaseAdmin
         .from('empresas')
         .update({ asaas_customer_id: customerId })
         .eq('id', empresaId);
     }
 
-    // 3. Data de vencimento = hoje (sem dias grátis — o trial já foi dado no onboarding)
+    // 3. Cancelar assinatura antiga se existir (upgrade/troca de plano)
+    if (assinaturaAntigaId && planoAntigo !== 'trial') {
+      try {
+        await asaasDelete(`/subscriptions/${assinaturaAntigaId}`);
+        console.log(`[Asaas] Assinatura antiga ${assinaturaAntigaId} cancelada (troca de plano: ${planoAntigo} → ${plano})`);
+      } catch (e) {
+        // Se falhar ao cancelar, loga mas não bloqueia a criação da nova
+        console.warn('[Asaas] Aviso: não foi possível cancelar assinatura antiga:', e);
+      }
+    }
+
+    // 4. Data de vencimento = hoje (cobrança imediata — trial já foi dado no onboarding)
     const nextDueDate = new Date();
     const dueDateStr = nextDueDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // 4. Criar assinatura mensal
+    // 5. Criar nova assinatura mensal
     const subscription = await asaasPost('/subscriptions', {
       customer: customerId,
-      billingType: 'UNDEFINED', // cliente escolhe a forma ao pagar (PIX, cartão, boleto)
+      billingType: 'UNDEFINED', // cliente escolhe (PIX, cartão, boleto)
       value: planoConfig.valor,
       nextDueDate: dueDateStr,
       cycle: 'MONTHLY',
@@ -71,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     const subscriptionId: string = subscription.id;
 
-    // 5. Buscar URL de pagamento da 1ª fatura
+    // 6. Buscar URL de pagamento da 1ª fatura
     let invoiceUrl: string | null = null;
     try {
       const payments = await asaasGet(`/subscriptions/${subscriptionId}/payments`);
@@ -79,12 +91,12 @@ export async function POST(req: NextRequest) {
         invoiceUrl = payments.data[0].invoiceUrl ?? payments.data[0].bankSlipUrl ?? null;
       }
     } catch {
-      // Se não conseguir a fatura ainda, retorna sucesso mesmo assim
+      // Fatura ainda não gerada — ok, usuário pode pagar depois
     }
 
-    // 6. Atualizar empresa no Supabase
+    // 7. Atualizar empresa no Supabase
     const planoExpira = new Date();
-    planoExpira.setDate(planoExpira.getDate() + 30); // próximo vencimento em 30 dias
+    planoExpira.setDate(planoExpira.getDate() + 30);
 
     await supabaseAdmin
       .from('empresas')
@@ -92,10 +104,13 @@ export async function POST(req: NextRequest) {
         assinatura_id: subscriptionId,
         plano: plano,
         status: 'ativo',
-        trial_expira_em: null,      // encerrou o trial
+        trial_expira_em: null,
         plano_expira_em: planoExpira.toISOString(),
+        inadimplente: false,
       })
       .eq('id', empresaId);
+
+    const isUpgrade = planoAntigo !== 'trial' && planoConfig.valor > (PLANOS[planoAntigo as PlanoKey]?.valor ?? 0);
 
     return NextResponse.json({
       ok: true,
@@ -103,8 +118,9 @@ export async function POST(req: NextRequest) {
       invoiceUrl,
       plano: planoConfig.nome,
       valor: planoConfig.valor,
+      isUpgrade,
+      planoAntigo,
     });
-
 
   } catch (err: any) {
     console.error('[Asaas/assinar]', err);

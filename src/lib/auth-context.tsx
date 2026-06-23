@@ -178,8 +178,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userId = authData.user.id;
+
+    // Verifica se o e-mail já foi usado em outro trial
+    // Busca em auth.users (via RPC) qualquer empresa com esse e-mail
+    const { data: emailCheck } = await supabase
+      .from('empresas')
+      .select('id, plano')
+      .eq('email', data.email)
+      .limit(1)
+      .maybeSingle();
+
+    const emailJaUsado = !!emailCheck;
     const trialExpira = new Date();
-    trialExpira.setDate(trialExpira.getDate() + 14);
+    if (emailJaUsado) {
+      // Trial já foi usado — expira imediatamente (sem período gratuito)
+      trialExpira.setDate(trialExpira.getDate() - 1);
+    } else {
+      // Primeiro cadastro — 14 dias grátis
+      trialExpira.setDate(trialExpira.getDate() + 14);
+    }
 
     // 2. Cria empresa + usuario via RPC (SECURITY DEFINER — bypassa RLS)
     // Isso resolve o erro 42501 que ocorre logo após o signUp

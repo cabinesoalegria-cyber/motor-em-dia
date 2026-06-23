@@ -157,11 +157,18 @@ export default function PlanosPage() {
       if (!res.ok) { toast.error(data.error ?? 'Erro ao criar assinatura'); return; }
 
       await refreshEmpresa();
-      toast.success(`Plano ${modalPlano} ativado! 🎉`);
+
+      if (data.isUpgrade) {
+        toast.success(`Upgrade para ${data.plano} realizado! Assinatura anterior cancelada. 🎉`);
+      } else {
+        toast.success(`Plano ${data.plano} ativado com sucesso! 🎉`);
+      }
 
       if (data.invoiceUrl) {
-        toast.info('Abrindo página de pagamento...', { duration: 3000 });
+        toast.info('Abrindo página de pagamento do Asaas...', { duration: 3000 });
         setTimeout(() => window.open(data.invoiceUrl, '_blank'), 1500);
+      } else {
+        toast.info('Acesse o Asaas para acompanhar sua fatura.', { duration: 4000 });
       }
     } catch (err: any) {
       toast.error(err.message ?? 'Erro de conexão');
@@ -323,6 +330,75 @@ export default function PlanosPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* ── Resumo do plano atual ──────────────────────────────── */}
+      <div className="rounded-2xl border bg-[rgb(var(--card))] border-[rgb(var(--card-border))] p-6">
+        <h3 className="font-bold text-[rgb(var(--foreground))] text-lg mb-4">Resumo do seu plano atual</h3>
+
+        {isTrial ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-orange-500">Trial Gratuito</p>
+                <p className="text-xs text-[rgb(var(--muted-foreground))]">
+                  {empresa?.trialExpiraEm
+                    ? `Expira em: ${new Date(empresa.trialExpiraEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`
+                    : 'Período de avaliação gratuita'}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-[rgb(var(--muted-foreground))]">
+              Ao assinar um plano acima, sua conta passa imediatamente para o plano escolhido.
+              Você escolhe como pagar: <strong>PIX, cartão de crédito ou boleto</strong>.
+            </p>
+          </div>
+        ) : currentPlan ? (
+          <div className="space-y-4">
+            {/* Plan badge */}
+            <div className={cn('flex items-center gap-3 p-3 rounded-xl border', COR[currentPlan.cor].bg, `border-${currentPlan.cor}-500/20`)}>
+              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', COR[currentPlan.cor].btn.split(' ')[0])}>
+                <currentPlan.icone className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className={cn('font-semibold', COR[currentPlan.cor].text)}>Plano {currentPlan.nome} — R$ {currentPlan.valor}/mês</p>
+                <p className="text-xs text-[rgb(var(--muted-foreground))]">Limite: {currentPlan.limiteClientes} · Clientes ativos: {clientes.length}</p>
+              </div>
+              <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', COR[currentPlan.cor].bg, COR[currentPlan.cor].text)}>✓ Ativo</span>
+            </div>
+
+            {/* Usage bar */}
+            {currentPlan.key !== 'premium' && (
+              <div>
+                <div className="flex justify-between text-xs text-[rgb(var(--muted-foreground))] mb-1.5">
+                  <span>Clientes cadastrados</span>
+                  <span className="font-mono">{clientes.length} / {PLAN_LIMITS[currentPlan.key].clientes}</span>
+                </div>
+                <div className="h-2 rounded-full bg-[rgb(var(--muted))] overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full transition-all', clientes.length >= PLAN_LIMITS[currentPlan.key].clientes ? 'bg-red-500' : 'bg-emerald-500')}
+                    style={{ width: `${Math.min(100, (clientes.length / PLAN_LIMITS[currentPlan.key].clientes) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Migration info */}
+            <div className="rounded-xl bg-[rgb(var(--muted))] p-3 text-sm text-[rgb(var(--muted-foreground))]">
+              <p className="font-semibold text-[rgb(var(--foreground))] mb-1">Como funciona o upgrade?</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs">
+                <li>Clique em <strong>"Fazer Upgrade"</strong> no plano desejado acima</li>
+                <li>Informe seu CPF/CNPJ e confirme</li>
+                <li>Sua assinatura atual é <strong>cancelada automaticamente</strong></li>
+                <li>Uma nova assinatura é criada no plano novo</li>
+                <li>A página de pagamento do Asaas abre automaticamente</li>
+              </ol>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* FAQ */}
