@@ -19,6 +19,19 @@ function getWeekDates(baseDate: Date) {
   });
 }
 
+/** Formata Date para YYYY-MM-DD no fuso local (evita shift de -1 dia do UTC) */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Retorna data de hoje no fuso local */
+function todayStr(): string {
+  return localDateStr(new Date());
+}
+
 // Modal de novo agendamento — fora do componente para evitar remount
 function AgendamentoModal({
   onClose,
@@ -156,7 +169,7 @@ function AgendamentoModal({
 export default function AgendaPage() {
   const { agendamentos, clientes, veiculos, addAgendamento, updateAgendamento } = useStore();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(todayStr());
   const [showModal, setShowModal] = useState(false);
 
   const weekDates = useMemo(() => getWeekDates(currentDate), [currentDate]);
@@ -203,34 +216,9 @@ export default function AgendaPage() {
     clienteId: string; veiculoId: string; servico: string;
     data: string; hora: string; observacoes: string;
   }) {
-    const id = addAgendamento({ ...data, status: 'agendado' });
-    toast.success('Agendamento criado!');
+    addAgendamento({ ...data, status: 'agendado' });
+    toast.success('Agendamento criado! Use o ✉️ para enviar confirmação via WhatsApp.');
     setShowModal(false);
-
-    // Perguntar sobre confirmacão via WhatsApp
-    const cliente = clientes.find(c => c.id === data.clienteId);
-    const veiculo = veiculos.find(v => v.id === data.veiculoId);
-    const officeName = localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
-    if (cliente) {
-      const dataFormatada = new Date(data.data + 'T12:00:00').toLocaleDateString('pt-BR', {
-        weekday: 'long', day: 'numeric', month: 'long'
-      });
-      const msg = [
-        `Ola ${cliente.nome}!`,
-        ``,
-        `Seu agendamento foi confirmado:`,
-        ``,
-        `Data: *${dataFormatada}* as *${data.hora}*`,
-        `Servico: *${data.servico}*`,
-        veiculo ? `Veiculo: ${veiculo.marca} ${veiculo.modelo} (${veiculo.placa})` : '',
-        ``,
-        `Por favor, confirme sua presenca respondendo *SIM* para confirmar ou *NAO* para cancelar.`,
-        ``,
-        `_${officeName}_`,
-      ].filter(l => l !== null).join('\n');
-      const waLink = `https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
-      window.open(waLink, '_blank');
-    }
   }
 
   function handleStatus(id: string, status: Agendamento['status']) {
@@ -261,7 +249,7 @@ export default function AgendaPage() {
     window.open(waLink, '_blank');
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -281,7 +269,7 @@ export default function AgendaPage() {
 
         <div className="grid grid-cols-7 gap-1">
           {weekDates.map((d, i) => {
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = localDateStr(d);
             const isToday = dateStr === today;
             const isSelected = dateStr === selectedDate;
             const count = weekCountMap[dateStr] || 0;
