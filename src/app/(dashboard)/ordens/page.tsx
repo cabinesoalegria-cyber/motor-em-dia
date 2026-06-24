@@ -2,10 +2,11 @@
 
 import { useState, useMemo, Suspense } from 'react';
 import { useStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { OrdemServico } from '@/lib/types';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn, buildWhatsAppLink } from '@/lib/utils';
 import {
-  Search, Plus, X, ChevronDown, Wrench, ArrowRight, Car, Trash2
+  Search, Plus, X, ChevronDown, Wrench, ArrowRight, Car, Trash2, MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -22,6 +23,8 @@ const STATUS_OPTIONS = [
 
 function OrdensPageInner() {
   const { ordens, clientes, veiculos, updateOrdemStatus, deleteOrdem } = useStore();
+  const { empresa } = useAuth();
+  const officeName = empresa?.nome ?? 'Nossa Oficina';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -212,13 +215,48 @@ function OrdensPageInner() {
                   <Link href={`/ordens/${o.id}`} className="flex items-center gap-1 text-xs text-orange-500 hover:underline">
                     Ver detalhes <ArrowRight className="w-3 h-3" />
                   </Link>
-                  <button
-                    onClick={() => setDeleteConfirmId(o.id)}
-                    className="flex items-center gap-1 text-xs text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Excluir
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Botão WhatsApp — aparece quando OS está finalizada */}
+                    {o.status === 'finalizada' && o.cliente && (
+                      (() => {
+                        const telefone = o.cliente.whatsapp || o.cliente.telefone || '';
+                        const veiculo = o.veiculo
+                          ? `${o.veiculo.marca} ${o.veiculo.modelo} (${o.veiculo.placa})`
+                          : 'seu veículo';
+                        const msg = [
+                          `Olá *${o.cliente.nome}*! ✅`,
+                          ``,
+                          `Seu veículo *${veiculo}* está pronto e aguardando sua retirada.`,
+                          ``,
+                          `Para melhor organização dos atendimentos da oficina, pedimos que, se possível, a retirada seja realizada ainda hoje ou no próximo horário disponível para você.`,
+                          ``,
+                          `Estamos à disposição.`,
+                          ``,
+                          `Obrigado pela preferência!`,
+                          ``,
+                          `*_${officeName}_* 🚗🔧`,
+                        ].join('\n');
+                        return telefone ? (
+                          <a
+                            href={buildWhatsAppLink(telefone, msg)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 px-2 py-1 rounded-lg transition-colors"
+                            title="Avisar cliente via WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" /> Avisar
+                          </a>
+                        ) : null;
+                      })()
+                    )}
+                    <button
+                      onClick={() => setDeleteConfirmId(o.id)}
+                      className="flex items-center gap-1 text-xs text-[rgb(var(--muted-foreground))] hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Excluir
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

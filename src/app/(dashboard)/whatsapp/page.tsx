@@ -37,13 +37,17 @@ function gerarTemplate(
       ].join('\n');
     case 'ospronta':
       return [
-        `Ola ${nome}!`,
+        `Olá *${nome}*! ✅`,
         ``,
-        `Sua OS *${osNumero}* do *${veiculo}* esta *pronta para retirada*!`,
+        `Seu veículo *${veiculo}* está pronto e aguardando sua retirada.`,
         ``,
-        `Passe em nossa oficina quando quiser.`,
+        `Para melhor organização dos atendimentos da oficina, pedimos que, se possível, a retirada seja realizada ainda hoje ou no próximo horário disponível para você.`,
         ``,
-        assinatura,
+        `Estamos à disposição.`,
+        ``,
+        `Obrigado pela preferência!`,
+        ``,
+        `*_${officeName}_* 🚗🔧`,
       ].join('\n');
     case 'agendamento':
       return [
