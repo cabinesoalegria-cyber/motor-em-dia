@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel, buildWhatsAppLink, cn, generateId } from '@/lib/utils';
 import {
   ArrowLeft, Printer, MessageSquare, CheckCircle,
@@ -25,6 +26,8 @@ const STATUS_FLOW: { value: OrdemServico['status']; label: string }[] = [
 export default function OrdemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { ordens, clientes, veiculos, updateOrdemStatus, updateOrdem } = useStore();
+  const { empresa } = useAuth();
+  const officeName = empresa?.nome || localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<OrdemServico['status'] | null>(null);
@@ -98,15 +101,46 @@ export default function OrdemDetailPage() {
 
   function handleWhatsApp() {
     if (!cliente) return;
-    const officeName = localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
-    const msg = [
-      `Ola *${cliente.nome}*! Sua OS *${ordem!.numero}* esta com status: *${getStatusLabel(ordem!.status)}*. Veiculo: *${veiculo?.marca} ${veiculo?.modelo}* - Placa: *${veiculo?.placa}* Valor total: *${formatCurrency(ordem!.valorTotal)}*`,
-      ``,
-      `Estamos à disposição!`,
-      ``,
-      `_*${officeName}*_`,
-    ].join('\n');
-    window.open(buildWhatsAppLink(cliente.whatsapp, msg), '_blank');
+    const telefone = cliente.whatsapp || cliente.telefone || '';
+    if (!telefone) { toast.error('Cliente sem WhatsApp cadastrado'); return; }
+
+    const veiculoDesc = veiculo
+      ? `${veiculo.marca} ${veiculo.modelo} (${veiculo.placa})`
+      : 'seu veículo';
+
+    let msg: string;
+    if (ordem.status === 'finalizada') {
+      // Mensagem específica de retirada
+      msg = [
+        `Olá *${cliente.nome}*! ✅`,
+        ``,
+        `Seu veículo *${veiculoDesc}* está pronto e aguardando sua retirada.`,
+        ``,
+        `Para melhor organização dos atendimentos da oficina, pedimos que, se possível, a retirada seja realizada ainda hoje ou no próximo horário disponível para você.`,
+        ``,
+        `Estamos à disposição.`,
+        ``,
+        `Obrigado pela preferência!`,
+        ``,
+        `*_${officeName}_* 🚗🔧`,
+      ].join('\n');
+    } else {
+      // Mensagem genérica de atualização de status
+      msg = [
+        `Olá *${cliente.nome}*!`,
+        ``,
+        `Atualização da sua OS *${ordem.numero}*:`,
+        `Veículo: *${veiculoDesc}*`,
+        `Status: *${getStatusLabel(ordem.status)}*`,
+        `Valor: *${formatCurrency(ordem.valorTotal)}*`,
+        ``,
+        `Estamos à disposição!`,
+        ``,
+        `*_${officeName}_*`,
+      ].join('\n');
+    }
+
+    window.open(buildWhatsAppLink(telefone, msg), '_blank');
   }
 
   function handlePrint() {

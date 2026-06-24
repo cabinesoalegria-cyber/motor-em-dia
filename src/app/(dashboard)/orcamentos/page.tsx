@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useEffect } from 'react';
+
 import { useSearchParams } from 'next/navigation';
 
 import { useStore } from '@/lib/store';
@@ -211,6 +212,11 @@ function OrcamentosPageInner() {
   const [tab, setTab] = useState<'lista' | 'novo'>(
     searchParams.get('tab') === 'novo' ? 'novo' : 'lista'
   );
+
+  // Reage quando o botão do header muda a URL para ?tab=novo
+  useEffect(() => {
+    if (searchParams.get('tab') === 'novo') setTab('novo');
+  }, [searchParams]);
 
   // ── New orçamento state ──
   const [clienteId, setClienteId] = useState('');
