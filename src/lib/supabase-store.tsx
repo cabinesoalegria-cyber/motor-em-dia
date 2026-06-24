@@ -379,6 +379,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
       status: data.status,
       problema_relatado: data.problemaRelatado,
       observacoes_internas: data.observacoesInternas,
+      descricao_servico_realizado: data.descricaoServicoRealizado || null,
       mecanico: data.mecanico || null,
       quilometragem_atual: data.quilometragemAtual,
       valor_mao_de_obra: data.valorMaoDeObra,

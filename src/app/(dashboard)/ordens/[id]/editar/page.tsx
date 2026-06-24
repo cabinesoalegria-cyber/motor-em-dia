@@ -200,7 +200,7 @@ export default function EditarOrdemPage() {
   const [servicos, setServicos] = useState<ServicoOS[]>(ordem?.servicos || []);
   const [pecasOS, setPecasOS] = useState<PecaOS[]>(ordem?.pecas || []);
   const [problema, setProblema] = useState(ordem?.problemaRelatado || '');
-  const [descricaoRealizado, setDescricaoRealizado] = useState((ordem as any)?.descricaoServicoRealizado || '');
+  const [descricaoRealizado, setDescricaoRealizado] = useState(ordem?.descricaoServicoRealizado || '');
   const [observacoes, setObservacoes] = useState(ordem?.observacoesInternas || '');
   const [quilometragem, setQuilometragem] = useState(String(ordem?.quilometragemAtual || ''));
   const [mecanico, setMecanico] = useState(ordem?.mecanico || '');
