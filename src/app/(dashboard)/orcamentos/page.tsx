@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
 import { useStore } from '@/lib/store';
 import { OrcamentoItem } from '@/lib/types';
 import { formatCurrency, formatDate, generateId, cn } from '@/lib/utils';
@@ -198,14 +200,17 @@ function ItemForm({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function OrcamentosPage() {
+function OrcamentosPageInner() {
   const {
     clientes, veiculos, orcamentos,
     addOrcamento, updateOrcamento, deleteOrcamento, approveOrcamento,
     servicosCatalogo, pecas: stockPecas,
   } = useStore();
 
-  const [tab, setTab] = useState<'lista' | 'novo'>('lista');
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<'lista' | 'novo'>(
+    searchParams.get('tab') === 'novo' ? 'novo' : 'lista'
+  );
 
   // ── New orçamento state ──
   const [clienteId, setClienteId] = useState('');
@@ -593,5 +598,13 @@ ${o.observacoes ? `<div class="obs"><strong>Problema Relatado pelo Cliente:</str
         </form>
       )}
     </div>
+  );
+}
+
+export default function OrcamentosPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <OrcamentosPageInner />
+    </Suspense>
   );
 }

@@ -26,7 +26,7 @@ const pageTitles: Record<string, string> = {
 
 const quickActions: Record<string, { href: string; label: string }> = {
   '/ordens': { href: '/ordens/nova', label: 'Nova OS' },
-  '/orcamentos': { href: '/orcamentos/nova', label: 'Novo Orcamento' },
+  '/orcamentos': { href: '/orcamentos?tab=novo', label: 'Novo Orçamento' },
 };
 
 // ─── UserMenu ──────────────────────────────────────────────────────────────
