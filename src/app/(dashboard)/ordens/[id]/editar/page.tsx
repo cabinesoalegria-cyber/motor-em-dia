@@ -569,8 +569,7 @@ export default function EditarOrdemPage() {
                           const qtd = Number(editQtd) || 1;
                           const val = Number(editValor) || 0;
                           const mk = Number(editMarkup) || 0;
-                          const rawTotal = qtd * val * (1 + mk / 100);
-                          const total = roundPeca(rawTotal);
+                          const total = calcPecaTotal(qtd, val, mk);
                           setPecasOS(prev => prev.map(x =>
                             x.id === p.id
                               ? { ...x, nome: editNome, quantidade: qtd, valorUnitario: val, markup: mk, valorTotal: total }
