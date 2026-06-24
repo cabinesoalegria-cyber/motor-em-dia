@@ -27,7 +27,7 @@ export default function OrdemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { ordens, clientes, veiculos, updateOrdemStatus, updateOrdem } = useStore();
   const { empresa } = useAuth();
-  const officeName = empresa?.nome || localStorage.getItem('autoflow-office-name') || 'Sua Oficina';
+  const officeName = empresa?.nome ?? 'Sua Oficina';
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<OrdemServico['status'] | null>(null);
@@ -100,7 +100,7 @@ export default function OrdemDetailPage() {
   void pendingStatus;
 
   function handleWhatsApp() {
-    if (!cliente) return;
+    if (!cliente || !ordem) return;
     const telefone = cliente.whatsapp || cliente.telefone || '';
     if (!telefone) { toast.error('Cliente sem WhatsApp cadastrado'); return; }
 
