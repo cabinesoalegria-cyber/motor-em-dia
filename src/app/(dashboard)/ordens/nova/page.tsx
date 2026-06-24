@@ -58,10 +58,9 @@ const inputCn = cn(
   'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-colors'
 );
 
-// ─── Rounding helper for peças totals ────────────────────────────
-function roundPeca(val: number): number {
-  const frac = val - Math.floor(val);
-  return frac >= 0.51 ? Math.ceil(val) : Math.floor(val);
+// ─── Simple 2-decimal rounding for peças (sem arredondamento para inteiro) ──
+function calcPecaTotal(qtd: number, valUnit: number, markup: number): number {
+  return Math.round(qtd * valUnit * (1 + markup / 100) * 100) / 100;
 }
 
 // ─── Serviço individual com revisão embutida ─────────────────────
@@ -367,14 +366,14 @@ export default function NovaOrdemPage() {
     }
     const qtd = Number(novaPecaQtd) || 1;
     const markup = Number(novaPecaMarkup) || 0;
-    const rawTotal = qtd * valUnit * (1 + markup / 100);
+    const valorTotal = calcPecaTotal(qtd, valUnit, markup);
     setPecasOS(prev => [...prev, {
       id: generateId(),
       nome: novaPeca,
       quantidade: qtd,
       valorUnitario: valUnit,
       markup,
-      valorTotal: roundPeca(rawTotal),
+      valorTotal,
     }]);
     setNovaPeca('');
     setNovaPecaQtd('1');
@@ -720,7 +719,7 @@ export default function NovaOrdemPage() {
                           const qtd = Number(editQtd) || 1;
                           const val = Number(editValor) || 0;
                           const mk = Number(editMarkup) || 0;
-                          const total = roundPeca(qtd * val * (1 + mk / 100));
+                          const total = calcPecaTotal(qtd, val, mk);
                           setPecasOS(prev => prev.map(x =>
                             x.id === p.id
                               ? { ...x, nome: editNome, quantidade: qtd, valorUnitario: val, markup: mk, valorTotal: total }
