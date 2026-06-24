@@ -591,7 +591,7 @@ export default function EditarOrdemPage() {
                     </div>
                     {Number(editMarkup) > 0 && (
                       <p className="text-xs text-emerald-600">
-                        Valor c/ markup: {formatCurrency(roundPeca(Number(editQtd) * Number(editValor) * (1 + Number(editMarkup) / 100)))}
+                        Valor c/ markup: {formatCurrency(calcPecaTotal(Number(editQtd), Number(editValor), Number(editMarkup)))}
                       </p>
                     )}
                   </div>
