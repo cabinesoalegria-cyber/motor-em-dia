@@ -372,14 +372,13 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
   // ── ORDEM ──
   const addOrdem = useCallback(async (data: Omit<OrdemServico, 'id' | 'numero' | 'createdAt' | 'updatedAt'>) => {
     const numero = await nextOsNumber();
-    const { data: row, error } = await supabase.from('ordens_servico').insert({
+    const payload: Record<string, unknown> = {
       empresa_id: empresaId, numero,
       cliente_id: data.clienteId || null,
       veiculo_id: data.veiculoId || null,
       status: data.status,
       problema_relatado: data.problemaRelatado,
       observacoes_internas: data.observacoesInternas,
-      descricao_servico_realizado: data.descricaoServicoRealizado || null,
       mecanico: data.mecanico || null,
       quilometragem_atual: data.quilometragemAtual,
       valor_mao_de_obra: data.valorMaoDeObra,
@@ -390,8 +389,16 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
       data_entrada: data.dataEntrada,
       data_conclusao: data.dataConclusao || null,
       pagamento: data.pagamento || null,
-    }).select().single();
-    if (error) throw error;
+    };
+    // Só inclui se tiver valor — coluna pode não existir em instâncias antigas
+    if (data.descricaoServicoRealizado) {
+      payload.descricao_servico_realizado = data.descricaoServicoRealizado;
+    }
+    const { data: row, error } = await supabase.from('ordens_servico').insert(payload).select().single();
+    if (error) {
+      console.error('[addOrdem] Supabase error:', error);
+      throw error;
+    }
     const mapped = mapOrdem(row);
     setOrdens(prev => [mapped, ...prev]);
     return row.id as string;
