@@ -14,13 +14,13 @@ export default function HomePage() {
       if (user) {
         router.replace('/dashboard');
       } else {
-        router.replace('/login');
+        router.replace('/landing');
       }
     }
   }, [user, loading, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--background))]">
+    <div className="min-h-screen flex items-center justify-center bg-[#06080f]">
       <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
     </div>
   );
