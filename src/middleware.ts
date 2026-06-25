@@ -1,24 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Rotas públicas que não precisam de login
+// Rotas completamente públicas (sem login, sem redirecionamento)
+const ALWAYS_PUBLIC = ['/landing'];
+
+// Rotas públicas: acessíveis sem login, mas com sessão redirecionam para dashboard
 const PUBLIC_ROUTES = ['/login', '/cadastro', '/recuperar-senha', '/esqueci-senha', '/planos'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Deixa passar arquivos estáticos e API routes
+  // /landing e variantes → sempre pública, sem interferência
+  if (ALWAYS_PUBLIC.some(r => pathname === r || pathname.startsWith(r + '/'))) {
+    return NextResponse.next();
+  }
+
   const isPublic = PUBLIC_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'));
 
-  // Verifica sessão pelo cookie do Supabase (sem chamar a API)
+  // Verifica sessão pelo cookie do Supabase
   const hasSession = request.cookies.getAll().some(c =>
     c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
   );
 
-  // Rota raiz → redireciona
+  // Rota raiz → redireciona para landing (sem sessão) ou dashboard (com sessão)
   if (pathname === '/') {
     return NextResponse.redirect(
-      new URL(hasSession ? '/dashboard' : '/login', request.url)
+      new URL(hasSession ? '/dashboard' : '/landing', request.url)
     );
   }
 
