@@ -6,6 +6,7 @@ import { Toaster } from 'sonner';
 import { DynamicFavicon } from '@/components/dynamic-favicon';
 import { AuthProvider } from '@/lib/auth-context';
 import { SupabaseStoreProvider } from '@/lib/supabase-store';
+import Analytics from '@/components/analytics';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
+          <Analytics />
           <DynamicFavicon />
           <AuthProvider>
             <SupabaseStoreProvider>

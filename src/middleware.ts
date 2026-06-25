@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Rotas completamente públicas (sem login, sem redirecionamento)
-const ALWAYS_PUBLIC = ['/landing'];
+const ALWAYS_PUBLIC = ['/landing', '/oficina-mecanica'];
 
 // Rotas públicas: acessíveis sem login, mas com sessão redirecionam para dashboard
 const PUBLIC_ROUTES = ['/login', '/cadastro', '/recuperar-senha', '/esqueci-senha', '/planos'];
