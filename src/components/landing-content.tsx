@@ -49,9 +49,10 @@ function Fade({ children, delay = 0, direction = 'up', className = '' }: {
 // max-w-7xl ≈ 1280px, px-6 mobile, lg:px-8 desktop
 const CONTAINER = 'max-w-7xl mx-auto px-6 lg:px-8';
 
-// ── Espaçamento padrão de seções ─────────────────────────────────────────────
+// ── Espaçamento padrão de seções ─────────────────────────────────────────────────────────
 const SECTION = 'py-20 md:py-24 lg:py-32';
-const SECTION_MUTED = 'py-20 md:py-24 lg:py-32 bg-slate-50/70';
+// bg-slate-50 com opacidade TOTAL — op70 sobre branco é quase invisível
+const SECTION_MUTED = 'py-20 md:py-24 lg:py-32 bg-slate-50';
 
 // ── CTA Link com tracking ─────────────────────────────────────────────────────
 function CTALink({ href, label, primary = true, className = '', source = '' }: {
@@ -95,9 +96,11 @@ function SectionHeader({
       >
         {title}
       </h2>
-      <p className="mt-5 text-slate-500 text-base md:text-lg leading-relaxed">
-        {subtitle}
-      </p>
+      {subtitle && (
+        <p className="mt-5 text-slate-500 text-base md:text-lg leading-relaxed">
+          {subtitle}
+        </p>
+      )}
     </Fade>
   );
 }
@@ -318,6 +321,9 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         {/* Warm glow */}
         <div className="pointer-events-none absolute top-0 inset-x-0 h-[65vh] opacity-50"
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% -5%, #ffedd5, transparent)' }} />
+        {/* Bottom fade — separa visualmente a Hero da próxima seção */}
+        <div className="pointer-events-none absolute bottom-0 inset-x-0 h-24"
+          style={{ background: 'linear-gradient(to bottom, transparent, rgba(248,250,252,0.6))' }} />
 
         <div className={cn(CONTAINER, 'relative z-10 py-20 lg:py-28 w-full')}>
           <div className="grid lg:grid-cols-2 gap-12 xl:gap-24 items-center">
@@ -410,7 +416,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             title="Quantos clientes sua oficina já perdeu por esquecimento?"
             subtitle="Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa."
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
             {[
               { icon: Clock, title: 'Revisões esquecidas', desc: 'O cliente promete "passar semana que vem" e nunca mais volta. Sem um lembrete, ele simplesmente esquece.' },
               { icon: RotateCcw, title: 'Trocas de óleo perdidas', desc: 'A troca de óleo é o serviço mais recorrente. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
@@ -487,7 +493,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             title={`O que muda na sua oficina\na partir do primeiro mês`}
             subtitle=""
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
             {[
               { icon: TrendingUp, title: 'Mais clientes retornando', desc: 'Clientes avisados no momento certo voltam mais. Não tem segredo: comunicação = fidelização.' },
               { icon: DollarSign, title: 'Faturamento recorrente', desc: 'Cada cliente fidelizado gera receita previsível todo mês, sem depender de novos anúncios.' },
@@ -534,7 +540,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             subtitle="Interface projetada para oficinas mecânicas. Simples, rápida e completa."
             align="center"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
             {[
               { icon: BarChart3, label: 'Dashboard', desc: 'Visão completa do negócio: OS abertas, faturamento e alertas em tempo real.' },
               { icon: Car, label: 'Veículos', desc: 'Histórico completo de cada carro atendido. Marca, modelo, placa, quilometragem.' },
@@ -566,7 +572,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             subtitle="Sem instalação. Sem complicação. Começa a funcionar no primeiro dia."
             align="center"
           />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 md:gap-6 lg:gap-8">
             {[
               { icon: Cloud, title: '100% online', desc: 'Sem instalar nada' },
               { icon: Smartphone, title: 'Celular e computador', desc: 'Qualquer dispositivo' },
