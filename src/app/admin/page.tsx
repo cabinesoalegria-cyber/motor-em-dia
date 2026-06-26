@@ -36,6 +36,27 @@ interface AdminStats {
   faturamento_mes: number;
 }
 
+// ── Status de pagamento por empresa ───────────────────────────────────────────────
+// plano = trial  → mostra Trial
+// plano_expira_em no futuro → Em dia
+// plano_expira_em no passado / nulo (plano pago) → Atrasado
+function statusPagamento(emp: EmpresaAdmin): 'trial' | 'em_dia' | 'atrasado' {
+  if (emp.plano === 'trial') return 'trial';
+  if (!emp.plano_expira_em) return 'atrasado';
+  return new Date(emp.plano_expira_em) >= new Date() ? 'em_dia' : 'atrasado';
+}
+
+const PAG_BADGE = {
+  trial:    'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
+  em_dia:   'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  atrasado: 'bg-red-500/15 text-red-500',
+};
+const PAG_LABEL = {
+  trial:    'Trial',
+  em_dia:   '✓ Em dia',
+  atrasado: '✗ Atrasado',
+};
+
 /* ─── Dados dos planos ───────────────────────────────────────────────────── */
 const PLANOS_INFO = [
   {
@@ -270,6 +291,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [empresas, setEmpresas] = useState<EmpresaAdmin[]>([]);
+  const [clientesPorEmpresa, setClientesPorEmpresa] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -286,12 +308,22 @@ export default function AdminPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [{ data: statsData }, { data: empresasData }] = await Promise.all([
+      const [{ data: statsData }, { data: empresasData }, { data: clientesData }] = await Promise.all([
         supabase.rpc('get_admin_stats'),
         supabase.from('empresas').select('*').order('created_at', { ascending: false }),
+        supabase.from('clientes').select('empresa_id'),
       ]);
       if (statsData) setStats(statsData as AdminStats);
       if (empresasData) setEmpresas(empresasData as EmpresaAdmin[]);
+
+      // Conta clientes por empresa
+      if (clientesData) {
+        const map: Record<string, number> = {};
+        clientesData.forEach((c: { empresa_id: string }) => {
+          map[c.empresa_id] = (map[c.empresa_id] || 0) + 1;
+        });
+        setClientesPorEmpresa(map);
+      }
     } catch {
       toast.error('Erro ao carregar dados admin');
     } finally {
@@ -464,11 +496,16 @@ export default function AdminPage() {
                         <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold capitalize', info.badge)}>
                           {info.label}
                         </span>
+                        {/* Badge pagamento */}
+                        <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold', PAG_BADGE[statusPagamento(emp)])}>
+                          {PAG_LABEL[statusPagamento(emp)]}
+                        </span>
                         {trialExpired && <span className="text-[10px] bg-red-500/15 text-red-500 px-2 py-0.5 rounded-full font-bold">Trial expirado</span>}
                         {emp.status === 'inativo' && <span className="text-[10px] bg-red-500/15 text-red-500 px-2 py-0.5 rounded-full font-bold">Inativa</span>}
                       </div>
                       <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5 truncate">
                         {emp.email} · {emp.proprietario || '—'}
+                        <span className="ml-2 font-medium text-[rgb(var(--foreground))]">· 👥 {clientesPorEmpresa[emp.id] ?? 0} clientes</span>
                       </p>
                     </div>
 
@@ -504,16 +541,30 @@ export default function AdminPage() {
 
                   {/* Detalhes expandidos */}
                   {expanded && (
-                    <div className="px-4 pb-4 pt-0 border-t border-[rgb(var(--card-border))] grid grid-cols-2 sm:grid-cols-4 gap-3 mt-0">
+                    <div className="px-4 pb-4 pt-0 border-t border-[rgb(var(--card-border))] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-0">
                       {[
                         { label: 'Cadastro',    value: new Date(emp.created_at).toLocaleDateString('pt-BR') },
                         { label: 'Trial até',   value: emp.trial_expira_em ? new Date(emp.trial_expira_em).toLocaleDateString('pt-BR') : '—' },
                         { label: 'Plano até',   value: emp.plano_expira_em ? new Date(emp.plano_expira_em).toLocaleDateString('pt-BR') : '—' },
                         { label: 'Telefone',    value: emp.telefone || '—' },
+                        { label: 'Clientes',    value: String(clientesPorEmpresa[emp.id] ?? 0) },
+                        { label: 'Pagamento',   value: PAG_LABEL[statusPagamento(emp)] },
                       ].map(d => (
-                        <div key={d.label} className="bg-[rgb(var(--muted))]/30 rounded-xl p-3 mt-3">
+                        <div key={d.label} className={cn(
+                          'rounded-xl p-3 mt-3',
+                          d.label === 'Pagamento' && statusPagamento(emp) === 'atrasado'
+                            ? 'bg-red-500/10'
+                            : d.label === 'Pagamento' && statusPagamento(emp) === 'em_dia'
+                            ? 'bg-emerald-500/10'
+                            : 'bg-[rgb(var(--muted))]/30'
+                        )}>
                           <p className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase tracking-wider">{d.label}</p>
-                          <p className="text-sm font-semibold text-[rgb(var(--foreground))] mt-0.5">{d.value}</p>
+                          <p className={cn(
+                            'text-sm font-semibold mt-0.5',
+                            d.label === 'Pagamento' && statusPagamento(emp) === 'atrasado' ? 'text-red-500' :
+                            d.label === 'Pagamento' && statusPagamento(emp) === 'em_dia' ? 'text-emerald-500' :
+                            'text-[rgb(var(--foreground))]'
+                          )}>{d.value}</p>
                         </div>
                       ))}
                     </div>
