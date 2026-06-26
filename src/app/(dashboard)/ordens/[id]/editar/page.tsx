@@ -190,7 +190,7 @@ function ServicoEditRow({
 export default function EditarOrdemPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { ordens, clientes, veiculos, pecas: stockPecas, servicosCatalogo, updateOrdem } = useStore();
+  const { ordens, clientes, veiculos, pecas: stockPecas, servicosCatalogo, updateOrdem, orcamentos, updateOrcamento } = useStore();
 
   const ordem = ordens.find(o => o.id === id);
   const cliente = ordem ? clientes.find(c => c.id === ordem.clienteId) : null;
@@ -334,6 +334,38 @@ export default function EditarOrdemPage() {
       valorPecas: valorPecasTotal,
       valorTotal,
     });
+
+    // ── Sincroniza o orçamento vinculado ────────────────────────────────
+    // Se esta OS veio de um orçamento, atualiza o valor do orçamento para
+    // refletir o valor atual da OS (serviços + peças).
+    const orcamentoVinculado = orcamentos.find(
+      (o) => o.ordemServicoId === ordem!.id
+    );
+    if (orcamentoVinculado) {
+      const itensAtualizados = [
+        ...servicos.map((s) => ({
+          id: s.id,
+          descricao: s.descricao,
+          tipo: 'servico' as const,
+          quantidade: 1,
+          valorUnitario: s.valor,
+          valorTotal: s.valor,
+        })),
+        ...pecasOS.map((p) => ({
+          id: p.id,
+          descricao: p.nome,
+          tipo: 'peca' as const,
+          quantidade: p.quantidade,
+          valorUnitario: p.valorUnitario,
+          valorTotal: p.valorTotal,
+        })),
+      ];
+      updateOrcamento(orcamentoVinculado.id, {
+        itens: itensAtualizados,
+        valorTotal,
+      });
+    }
+
     toast.success('OS atualizada com sucesso!');
     router.push(`/ordens/${id}`);
   }
