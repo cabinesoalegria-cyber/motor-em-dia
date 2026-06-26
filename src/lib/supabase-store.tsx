@@ -21,6 +21,16 @@ import type {
 
 // ─── Mappers: snake_case DB → camelCase TS ────────────────────────────────────
 
+// ── Retorna a data local no formato YYYY-MM-DD (sem deslocamento UTC) ──────────────
+// new Date().toISOString() usa UTC, o que adianta a data 1 dia para fuso UTC-3.
+function localDateStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
@@ -437,7 +447,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
             tipo: 'entrada',
             descricao: `${ordem.numero} - entrega (auto)`,
             valor: total,
-            data: new Date().toISOString().split('T')[0],
+            data: localDateStr(),
             ordem_servico_id: id,
             cliente_id: ordem.clienteId || null,
             pago: true,
@@ -631,7 +641,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
         id: generateId(), nome: i.descricao, quantidade: i.quantidade,
         valorUnitario: i.valorUnitario, valorTotal: i.valorTotal,
       })),
-      data_entrada: new Date().toISOString().split('T')[0],
+      data_entrada: localDateStr(),
     }).select().single();
     if (error) throw error;
 
@@ -709,7 +719,7 @@ export function SupabaseStoreProvider({ children }: { children: ReactNode }) {
   }, [empresaId]);
 
   const pagarConta = useCallback(async (id: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     await supabase.from('contas_pagar').update({
       pago: true, data_pagamento: today,
     }).eq('id', id).eq('empresa_id', empresaId!);

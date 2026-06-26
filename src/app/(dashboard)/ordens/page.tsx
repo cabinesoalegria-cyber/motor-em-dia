@@ -298,7 +298,8 @@ function OrdensPageInner() {
 
   function handleConfirmarEntrega(pagamento: PagamentoOS) {
     if (!entregueOrdemId) return;
-    const today = new Date().toISOString().split('T')[0];
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
     updateOrdem(entregueOrdemId, {
       status: 'entregue',
       pagamento,

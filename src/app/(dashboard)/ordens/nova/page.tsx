@@ -417,7 +417,7 @@ export default function NovaOrdemPage() {
         valorPecas: valorPecasTotal,
         valorTotal,
         status,
-        dataEntrada: new Date().toISOString(),
+        dataEntrada: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; })(),
       });
       localStorage.removeItem('os_draft');
       toast.success('OS criada com sucesso!');
