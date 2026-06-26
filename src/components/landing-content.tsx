@@ -14,7 +14,7 @@ function cn(...cls: (string | boolean | undefined)[]) {
   return cls.filter(Boolean).join(' ');
 }
 
-function useInView(threshold = 0.08) {
+function useInView(threshold = 0.06) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -29,9 +29,7 @@ function useInView(threshold = 0.08) {
   return { ref, visible };
 }
 
-function Fade({
-  children, delay = 0, direction = 'up', className = '',
-}: {
+function Fade({ children, delay = 0, direction = 'up', className = '' }: {
   children: React.ReactNode; delay?: number;
   direction?: 'up' | 'left' | 'right' | 'none'; className?: string;
 }) {
@@ -47,7 +45,15 @@ function Fade({
   );
 }
 
-// ── Tracked CTA link ──────────────────────────────────────────────────────────
+// ── Container padrão ─────────────────────────────────────────────────────────
+// max-w-7xl ≈ 1280px, px-6 mobile, lg:px-8 desktop
+const CONTAINER = 'max-w-7xl mx-auto px-6 lg:px-8';
+
+// ── Espaçamento padrão de seções ─────────────────────────────────────────────
+const SECTION = 'py-20 md:py-24 lg:py-32';
+const SECTION_MUTED = 'py-20 md:py-24 lg:py-32 bg-slate-50/70';
+
+// ── CTA Link com tracking ─────────────────────────────────────────────────────
 function CTALink({ href, label, primary = true, className = '', source = '' }: {
   href: string; label: string; primary?: boolean; className?: string; source?: string;
 }) {
@@ -55,9 +61,9 @@ function CTALink({ href, label, primary = true, className = '', source = '' }: {
     <Link href={href}
       onClick={() => trackEvent('cta_click', { button_label: label, source })}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all text-[15px]',
+        'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200',
         primary
-          ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200 hover:shadow-md hover:shadow-orange-200'
+          ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200 hover:shadow-md hover:shadow-orange-200 hover:-translate-y-px'
           : 'border-2 border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700',
         className
       )}>
@@ -67,7 +73,36 @@ function CTALink({ href, label, primary = true, className = '', source = '' }: {
   );
 }
 
-// ── ROI Calculator ──────────────────────────────────────────────────────────
+// ── Cabeçalho de seção padronizado ────────────────────────────────────────────
+function SectionHeader({
+  label, title, subtitle, align = 'left', className = ''
+}: {
+  label: string; title: string; subtitle: string;
+  align?: 'left' | 'center'; className?: string;
+}) {
+  return (
+    <Fade className={cn(
+      align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl',
+      'mb-12 md:mb-16',
+      className
+    )}>
+      <span className="text-orange-600 text-xs font-bold uppercase tracking-widest">
+        {label}
+      </span>
+      <h2
+        className="mt-4 font-black text-slate-900 leading-tight"
+        style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.75rem)' }}
+      >
+        {title}
+      </h2>
+      <p className="mt-5 text-slate-500 text-base md:text-lg leading-relaxed">
+        {subtitle}
+      </p>
+    </Fade>
+  );
+}
+
+// ── ROI Calculator ────────────────────────────────────────────────────────────
 function Calculator() {
   const [vehicles, setVehicles] = useState(40);
   const [ticket, setTicket] = useState(350);
@@ -79,10 +114,7 @@ function Calculator() {
 
   function handleChange(field: 'v' | 't', val: number) {
     if (field === 'v') setVehicles(val); else setTicket(val);
-    if (!interacted) {
-      setInteracted(true);
-      trackEvent('calculator_use', { vehicles, ticket });
-    }
+    if (!interacted) { setInteracted(true); trackEvent('calculator_use', { vehicles, ticket }); }
   }
 
   return (
@@ -92,7 +124,6 @@ function Calculator() {
         <h3 className="text-slate-900 text-2xl font-black">Quanto faturamento está escapando?</h3>
       </div>
       <div className="p-8 md:p-10 grid md:grid-cols-2 gap-10 md:gap-14">
-        {/* Sliders */}
         <div className="space-y-10">
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -100,8 +131,7 @@ function Calculator() {
               <span className="text-slate-900 font-black text-lg bg-orange-50 border border-orange-100 px-3 py-1 rounded-lg min-w-[48px] text-center">{vehicles}</span>
             </div>
             <input type="range" min={10} max={200} step={5} value={vehicles}
-              onChange={e => handleChange('v', Number(e.target.value))}
-              className="w-full accent-orange-500" />
+              onChange={e => handleChange('v', Number(e.target.value))} className="w-full accent-orange-500" />
             <div className="flex justify-between mt-2 text-xs text-slate-400 font-medium">
               <span>10</span><span>200</span>
             </div>
@@ -114,8 +144,7 @@ function Calculator() {
               </span>
             </div>
             <input type="range" min={150} max={2000} step={50} value={ticket}
-              onChange={e => handleChange('t', Number(e.target.value))}
-              className="w-full accent-orange-500" />
+              onChange={e => handleChange('t', Number(e.target.value))} className="w-full accent-orange-500" />
             <div className="flex justify-between mt-2 text-xs text-slate-400 font-medium">
               <span>R$ 150</span><span>R$ 2.000</span>
             </div>
@@ -126,7 +155,6 @@ function Calculator() {
             </p>
           </div>
         </div>
-        {/* Results */}
         <div className="flex flex-col gap-5 justify-center">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-7">
             <p className="text-slate-500 text-sm mb-2">Faturamento recuperado / mês</p>
@@ -148,11 +176,11 @@ function Calculator() {
 function HeroMockup() {
   return (
     <div className="relative w-full max-w-[400px]" style={{ perspective: '1100px' }}>
-      <div className="absolute inset-x-8 bottom-0 h-16 bg-orange-300/30 blur-2xl rounded-full"
-        style={{ transform: 'translateY(50%)' }} />
-      <div className="relative rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
-        style={{ transform: 'rotateY(-5deg) rotateX(2deg)' }}>
-        {/* Titlebar */}
+      <div className="absolute inset-x-8 -bottom-4 h-16 bg-orange-300/25 blur-2xl rounded-full" />
+      <div
+        className="relative rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
+        style={{ transform: 'rotateY(-5deg) rotateX(2deg)' }}
+      >
         <div className="flex items-center gap-1.5 px-4 py-3 bg-slate-50 border-b border-slate-200">
           <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
@@ -161,7 +189,6 @@ function HeroMockup() {
             app.motoremdia.com.br
           </div>
         </div>
-        {/* Content */}
         <div className="p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -203,7 +230,6 @@ function HeroMockup() {
           ))}
         </div>
       </div>
-      {/* Floating badge */}
       <div className="absolute -right-3 top-14 bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-lg"
         style={{ transform: 'rotateY(-3deg)' }}>
         <div className="flex items-center gap-2">
@@ -220,12 +246,7 @@ function HeroMockup() {
   );
 }
 
-// ── Section wrapper ────────────────────────────────────────────────────────────
-// py-20 = 80px mobile, py-[100px] tablet, py-[140px] desktop
-const sectionCn = 'py-20 sm:py-[100px] lg:py-[140px]';
-const containerCn = 'max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-10';
-
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function LandingPageContent({ source = 'landing' }: { source?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -234,7 +255,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
   useEffect(() => {
     const fn = () => {
       setScrolled(window.scrollY > 20);
-      setShowFloatingCTA(window.scrollY > 500);
+      setShowFloatingCTA(window.scrollY > 600);
     };
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
@@ -244,12 +265,12 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
     <div className="bg-white text-slate-900 min-h-screen overflow-x-hidden"
       style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
-      {/* ── NAVBAR ──────────────────────────────────────────────────── */}
+      {/* ══ NAVBAR ══════════════════════════════════════════════════════ */}
       <header className={cn(
         'fixed top-0 inset-x-0 z-50 transition-all duration-300',
         scrolled ? 'bg-white/96 backdrop-blur-xl border-b border-slate-200 shadow-sm' : 'bg-white/80 backdrop-blur-sm'
       )}>
-        <div className={cn(containerCn, 'h-16 flex items-center justify-between')}>
+        <div className={cn(CONTAINER, 'h-16 flex items-center justify-between')}>
           <Link href="/landing" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
               <Wrench className="w-4 h-4 text-white" />
@@ -258,22 +279,13 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8">
-            {[
-              ['Problema', '#problema'],
-              ['Solução', '#solucao'],
-              ['Como funciona', '#como-funciona'],
-              ['Calculadora', '#calculadora'],
-            ].map(([label, href]) => (
-              <a key={href} href={href} className="text-sm text-slate-500 hover:text-slate-900 font-medium transition-colors">
-                {label}
-              </a>
+            {[['Problema', '#problema'], ['Solução', '#solucao'], ['Como funciona', '#como-funciona'], ['Calculadora', '#calculadora']].map(([label, href]) => (
+              <a key={href} href={href} className="text-sm text-slate-500 hover:text-slate-900 font-medium transition-colors">{label}</a>
             ))}
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-sm text-slate-500 hover:text-slate-900 font-medium px-3 py-2">
-              Entrar
-            </Link>
+            <Link href="/login" className="text-sm text-slate-500 hover:text-slate-900 font-medium px-3 py-2">Entrar</Link>
             <CTALink href="/cadastro" label="Teste grátis por 14 dias" source={`${source}_nav`} className="px-5 py-2.5 text-sm" />
           </div>
 
@@ -284,17 +296,13 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
 
         {menuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white shadow-lg">
-            <div className={cn(containerCn, 'py-4 space-y-1')}>
+            <div className={cn(CONTAINER, 'py-4 space-y-1')}>
               {[['Problema', '#problema'], ['Solução', '#solucao'], ['Como funciona', '#como-funciona'], ['Calculadora', '#calculadora']].map(([label, href]) => (
                 <a key={href} href={href} onClick={() => setMenuOpen(false)}
-                  className="block py-3 text-slate-700 text-sm font-medium border-b border-slate-100 last:border-0">
-                  {label}
-                </a>
+                  className="block py-3 text-slate-700 text-sm font-medium border-b border-slate-100 last:border-0">{label}</a>
               ))}
               <div className="pt-4 space-y-3">
-                <Link href="/login" onClick={() => setMenuOpen(false)} className="block py-3 text-center text-sm text-slate-500 font-medium">
-                  Entrar
-                </Link>
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="block py-3 text-center text-sm text-slate-500 font-medium">Entrar</Link>
                 <CTALink href="/cadastro" label="Teste grátis por 14 dias" source={`${source}_mobile_menu`} className="w-full py-3.5 px-6" />
               </div>
             </div>
@@ -302,17 +310,19 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         )}
       </header>
 
-      {/* ── HERO — 100vh ─────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', paddingTop: '80px' }}
-        className="flex items-center relative overflow-hidden">
-        {/* Warm radial glow */}
-        <div className="pointer-events-none absolute top-0 inset-x-0 h-[70vh] opacity-50"
+      {/* ══ HERO — 100vh ════════════════════════════════════════════════ */}
+      <section
+        className="relative flex items-center overflow-hidden"
+        style={{ minHeight: '100vh', paddingTop: '64px' }}
+      >
+        {/* Warm glow */}
+        <div className="pointer-events-none absolute top-0 inset-x-0 h-[65vh] opacity-50"
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% -5%, #ffedd5, transparent)' }} />
 
-        <div className={cn(containerCn, 'relative z-10 py-16 lg:py-24 w-full')}>
-          <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
+        <div className={cn(CONTAINER, 'relative z-10 py-20 lg:py-28 w-full')}>
+          <div className="grid lg:grid-cols-2 gap-12 xl:gap-24 items-center">
 
-            {/* Left */}
+            {/* Copy */}
             <div className="max-w-xl">
               <Fade>
                 <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 mb-8">
@@ -322,11 +332,11 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               </Fade>
 
               <Fade delay={70}>
-                <h1 className="font-black text-slate-900 tracking-tight mb-6 leading-[1.07]"
+                <h1 className="font-black text-slate-900 tracking-tight leading-[1.07] mb-6"
                   style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.75rem)' }}>
                   Nunca mais perca<br />
-                  uma revisão<br className="hidden sm:block" />
-                  <span className="text-orange-500"> por esquecimento.</span>
+                  uma revisão por<br />
+                  <span className="text-orange-500">esquecimento.</span>
                 </h1>
               </Fade>
 
@@ -346,8 +356,8 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
 
               <Fade delay={210}>
                 <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                  <CTALink href="/cadastro" label="Quero ver funcionando" source={`${source}_hero_primary`} className="py-4 px-7" />
-                  <CTALink href="/cadastro" label="Teste grátis por 14 dias" primary={false} source={`${source}_hero_secondary`} className="py-4 px-7" />
+                  <CTALink href="/cadastro" label="Quero ver funcionando" source={`${source}_hero_primary`} className="py-4 px-7 text-[15px]" />
+                  <CTALink href="/cadastro" label="Teste grátis por 14 dias" primary={false} source={`${source}_hero_secondary`} className="py-4 px-7 text-[15px]" />
                 </div>
               </Fade>
 
@@ -363,7 +373,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               </Fade>
             </div>
 
-            {/* Right: Mockup */}
+            {/* Mockup */}
             <Fade delay={100} direction="left" className="hidden lg:flex justify-end">
               <HeroMockup />
             </Fade>
@@ -371,9 +381,9 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ── FEATURE STRIP ─────────────────────────────────────────────── */}
-      <div className="border-y border-slate-100 bg-slate-50/80">
-        <div className={cn(containerCn, 'py-6')}>
+      {/* ══ FEATURE STRIP — separador ══════════════════════════════════ */}
+      <div className="border-y border-slate-100 bg-slate-50">
+        <div className={cn(CONTAINER, 'py-6')}>
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-3.5">
             {[
               { icon: Bell, label: 'Lembretes automáticos' },
@@ -392,27 +402,20 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </div>
 
-      {/* ── PROBLEMA ─────────────────────────────────────────────────── */}
-      <section id="problema" className={sectionCn}>
-        <div className={containerCn}>
-          <Fade className="max-w-2xl mb-14 md:mb-20">
-            <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-4">O problema</p>
-            <h2 className="font-black text-slate-900 leading-tight mb-5"
-              style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.6rem)' }}>
-              Quantos clientes sua oficina<br className="hidden md:block" />
-              já perdeu por esquecimento?
-            </h2>
-            <p className="text-slate-500 text-base md:text-lg leading-relaxed">
-              Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa.
-            </p>
-          </Fade>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+      {/* ══ PROBLEMA — bg levemente alternado ══════════════════════════ */}
+      <section id="problema" className={SECTION_MUTED}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="O problema"
+            title="Quantos clientes sua oficina já perdeu por esquecimento?"
+            subtitle="Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {[
               { icon: Clock, title: 'Revisões esquecidas', desc: 'O cliente promete "passar semana que vem" e nunca mais volta. Sem um lembrete, ele simplesmente esquece.' },
-              { icon: RotateCcw, title: 'Trocas de óleo perdidas', desc: 'A troca de óleo é o serviço mais recorrente de uma oficina. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
+              { icon: RotateCcw, title: 'Trocas de óleo perdidas', desc: 'A troca de óleo é o serviço mais recorrente. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
               { icon: Car, title: 'Falta de acompanhamento', desc: 'Sem acompanhar o histórico do veículo, sua oficina perde oportunidades de oferecer serviços preventivos no momento certo.' },
-              { icon: Users, title: 'Clientes que nunca retornam', desc: 'Conquistar um novo cliente custa de 5 a 7 vezes mais do que manter um. Sua oficina está perdendo dinheiro na retenção.' },
+              { icon: Users, title: 'Clientes que nunca retornam', desc: 'Conquistar um novo cliente custa de 5 a 7 vezes mais do que manter um. Você está perdendo dinheiro na retenção.' },
               { icon: FileText, title: 'Histórico desorganizado', desc: 'Informações em papel, caderno ou memória do mecânico. Quando alguém sai, o histórico vai junto.' },
               { icon: MessageSquare, title: 'WhatsApp virou bagunça', desc: 'Clientes, fornecedores, família — tudo misturado. Impossível acompanhar quem precisa de atenção hoje.' },
             ].map((item, i) => (
@@ -430,24 +433,20 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ── SOLUÇÃO ──────────────────────────────────────────────────── */}
-      <section id="solucao" className={cn(sectionCn, 'bg-slate-50 border-y border-slate-100')}>
-        <div className={containerCn}>
-          <Fade className="text-center mb-14 md:mb-20">
-            <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-4">A solução</p>
-            <h2 className="font-black text-slate-900 leading-tight mb-5 mx-auto"
-              style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.6rem)', maxWidth: '620px' }}>
-              Seu sistema de acompanhamento automático
-            </h2>
-            <p className="text-slate-500 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-              Um fluxo simples que transforma cada serviço realizado em uma oportunidade de retorno garantido.
-            </p>
-          </Fade>
+      {/* ══ SOLUÇÃO — fundo branco ══════════════════════════════════════ */}
+      <section id="solucao" className={SECTION}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="A solução"
+            title="Seu sistema de acompanhamento automático"
+            subtitle="Um fluxo simples que transforma cada serviço realizado em uma oportunidade de retorno garantido."
+            align="center"
+          />
 
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto mt-12 md:mt-16">
             {[
               { icon: Car, title: 'Cadastro do veículo', desc: 'Cliente, carro e quilometragem registrados em 2 minutos. Histórico centralizado para sempre.' },
-              { icon: FileText, title: 'Registro da manutenção', desc: 'OS criada, serviços e próximo prazo de retorno definidos.' },
+              { icon: FileText, title: 'Registro da manutenção', desc: 'OS criada, serviços e próximo prazo de retorno definidos com precisão.' },
               { icon: Zap, title: 'Monitoramento automático', desc: 'O sistema acompanha todos os prazos em segundo plano, sem que você precise fazer nada.' },
               { icon: Bell, title: 'Alerta de retorno', desc: 'Você recebe o aviso e envia mensagem pelo WhatsApp com um clique.' },
               { icon: TrendingUp, title: 'Cliente volta para sua oficina', desc: 'Relacionamento fortalecido. Faturamento crescendo todo mês.' },
@@ -456,12 +455,14 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
                 <div className="flex items-stretch gap-5 md:gap-6">
                   <div className="flex flex-col items-center flex-shrink-0 w-12">
                     <div className={cn(
-                      'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 z-10',
+                      'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
                       i === 4 ? 'bg-orange-500 shadow-md shadow-orange-200' : 'bg-white border-2 border-orange-200'
                     )}>
                       <step.icon className={cn('w-5 h-5', i === 4 ? 'text-white' : 'text-orange-500')} />
                     </div>
-                    {i < 4 && <div className="flex-1 w-px bg-gradient-to-b from-orange-200 to-orange-50 my-1" style={{ minHeight: '44px' }} />}
+                    {i < 4 && (
+                      <div className="flex-1 w-px bg-gradient-to-b from-orange-200 to-orange-50 my-1" style={{ minHeight: '48px' }} />
+                    )}
                   </div>
                   <div className="pb-10 last:pb-0 flex-1 pt-2">
                     <h3 className="text-slate-900 font-bold text-base mb-2">{step.title}</h3>
@@ -472,25 +473,21 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             ))}
           </div>
 
-          {/* Mid-page CTA */}
           <Fade className="flex justify-center mt-14 md:mt-16">
-            <CTALink href="/cadastro" label="Quero ver isso funcionando" source={`${source}_solucao_cta`} className="py-4 px-8" />
+            <CTALink href="/cadastro" label="Quero ver isso funcionando" source={`${source}_solucao_cta`} className="py-4 px-8 text-[15px]" />
           </Fade>
         </div>
       </section>
 
-      {/* ── BENEFÍCIOS ───────────────────────────────────────────────── */}
-      <section className={sectionCn}>
-        <div className={containerCn}>
-          <Fade className="max-w-2xl mb-14 md:mb-20">
-            <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-4">Benefícios</p>
-            <h2 className="font-black text-slate-900 leading-tight mb-5"
-              style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.6rem)' }}>
-              O que muda na sua oficina<br className="hidden md:block" />
-              a partir do primeiro mês
-            </h2>
-          </Fade>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+      {/* ══ BENEFÍCIOS — fundo alternado ═══════════════════════════════ */}
+      <section id="beneficios" className={SECTION_MUTED}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="Benefícios"
+            title={`O que muda na sua oficina\na partir do primeiro mês`}
+            subtitle=""
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {[
               { icon: TrendingUp, title: 'Mais clientes retornando', desc: 'Clientes avisados no momento certo voltam mais. Não tem segredo: comunicação = fidelização.' },
               { icon: DollarSign, title: 'Faturamento recorrente', desc: 'Cada cliente fidelizado gera receita previsível todo mês, sem depender de novos anúncios.' },
@@ -513,44 +510,34 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ── CALCULADORA ──────────────────────────────────────────────── */}
-      <section id="calculadora" className={cn(sectionCn, 'bg-slate-50 border-y border-slate-100')}>
-        <div className={containerCn}>
-          <Fade className="text-center mb-12 md:mb-16">
-            <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-4">Calculadora</p>
-            <h2 className="font-black text-slate-900 leading-tight mb-5"
-              style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.6rem)' }}>
-              Calcule quanto faturamento<br className="hidden md:block" />
-              você está perdendo agora
-            </h2>
-            <p className="text-slate-500 text-base md:text-lg max-w-lg mx-auto leading-relaxed">
-              Ajuste os valores e veja a projeção de faturamento que pode ser recuperado com lembretes automáticos.
-            </p>
-          </Fade>
+      {/* ══ CALCULADORA — fundo branco ═════════════════════════════════ */}
+      <section id="calculadora" className={SECTION}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="Calculadora"
+            title="Calcule quanto faturamento você está perdendo agora"
+            subtitle="Ajuste os valores e veja a projeção de faturamento que pode ser recuperado com lembretes automáticos."
+            align="center"
+          />
           <div className="max-w-4xl mx-auto">
             <Fade delay={100}><Calculator /></Fade>
           </div>
         </div>
       </section>
 
-      {/* ── COMO FUNCIONA ─────────────────────────────────────────────── */}
-      <section id="como-funciona" className={sectionCn}>
-        <div className={containerCn}>
-          <Fade className="text-center mb-14 md:mb-20">
-            <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-4">O sistema</p>
-            <h2 className="font-black text-slate-900 leading-tight mb-5"
-              style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.6rem)' }}>
-              Tudo que sua oficina precisa,<br className="hidden md:block" />
-              em uma tela só
-            </h2>
-            <p className="text-slate-500 text-base md:text-lg max-w-xl mx-auto">
-              Interface projetada para oficinas mecânicas. Simples, rápida e completa.
-            </p>
-          </Fade>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+      {/* ══ O SISTEMA — fundo alternado ════════════════════════════════ */}
+      <section id="como-funciona" className={SECTION_MUTED}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="O sistema"
+            title={`Tudo que sua oficina precisa,\nem uma tela só`}
+            subtitle="Interface projetada para oficinas mecânicas. Simples, rápida e completa."
+            align="center"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {[
               { icon: BarChart3, label: 'Dashboard', desc: 'Visão completa do negócio: OS abertas, faturamento e alertas em tempo real.' },
-              { icon: Car, label: 'Veículos', desc: 'Histórico completo de cada carro atendido. Marca, modelo, placa, KM.' },
+              { icon: Car, label: 'Veículos', desc: 'Histórico completo de cada carro atendido. Marca, modelo, placa, quilometragem.' },
               { icon: FileText, label: 'Ordens de Serviço', desc: 'OS digital com PDF profissional. Criada em minutos, enviada na hora.' },
               { icon: Bell, label: 'Alertas de revisão', desc: 'Lembretes automáticos por data e quilometragem. Zero esquecimento.' },
               { icon: DollarSign, label: 'Financeiro', desc: 'Entradas, saídas e lucratividade por serviço. Saldo em tempo real.' },
@@ -561,7 +548,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
                   <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-6 shadow-sm shadow-orange-200 group-hover:scale-105 transition-transform duration-300">
                     <item.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-slate-900 font-bold text-lg mb-2">{item.label}</h3>
+                  <h3 className="text-slate-900 font-bold text-lg mb-3">{item.label}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </Fade>
@@ -570,16 +557,16 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ── CONFIANÇA ──────────────────────────────────────────────────── */}
-      <section className={cn(sectionCn, 'bg-slate-50 border-y border-slate-100')}>
-        <div className={containerCn}>
-          <Fade className="text-center mb-12 md:mb-16">
-            <h2 className="font-black text-slate-900 mb-4" style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2rem)' }}>
-              Seguro, confiável e pronto para usar
-            </h2>
-            <p className="text-slate-500 text-base">Sem instalação. Sem complicação. Começa a funcionar no primeiro dia.</p>
-          </Fade>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+      {/* ══ CONFIANÇA — fundo branco ════════════════════════════════════ */}
+      <section className={SECTION}>
+        <div className={CONTAINER}>
+          <SectionHeader
+            label="Segurança"
+            title="Seguro, confiável e pronto para usar"
+            subtitle="Sem instalação. Sem complicação. Começa a funcionar no primeiro dia."
+            align="center"
+          />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 md:gap-6">
             {[
               { icon: Cloud, title: '100% online', desc: 'Sem instalar nada' },
               { icon: Smartphone, title: 'Celular e computador', desc: 'Qualquer dispositivo' },
@@ -601,38 +588,40 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ── CTA FINAL ──────────────────────────────────────────────────── */}
-      <section className={sectionCn}>
-        <div className={cn(containerCn, 'text-center max-w-3xl mx-auto')}>
+      {/* ══ CTA FINAL — fundo levemente destacado ══════════════════════ */}
+      <section className="py-20 md:py-24 lg:py-32 bg-slate-50 border-t border-slate-100">
+        <div className={cn(CONTAINER, 'text-center')}>
           <Fade>
-            <div className="w-14 h-1 bg-orange-500 rounded-full mx-auto mb-12" />
-            <h2 className="font-black text-slate-900 leading-tight mb-6"
-              style={{ fontSize: 'clamp(1.9rem, 3.8vw, 3.25rem)' }}>
-              Pare de perder clientes<br />
-              para o esquecimento.
-            </h2>
-            <p className="text-slate-500 text-lg leading-relaxed mb-12 max-w-xl mx-auto">
-              Comece hoje a transformar{' '}
-              <span className="text-slate-700 font-semibold">manutenção em relacionamento</span>{' '}
-              e relacionamento em{' '}
-              <span className="text-slate-700 font-semibold">faturamento.</span>
-            </p>
-            <CTALink href="/cadastro" label="Quero testar grátis" source={`${source}_cta_final`} className="py-4 px-12 text-base" />
-            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-10">
-              {['14 dias grátis', 'Sem cartão', 'Cancele quando quiser', 'Suporte em português'].map(t => (
-                <span key={t} className="flex items-center gap-1.5 text-sm text-slate-400 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  {t}
-                </span>
-              ))}
+            <div className="max-w-3xl mx-auto">
+              <div className="w-14 h-1 bg-orange-500 rounded-full mx-auto mb-10 md:mb-14" />
+              <h2 className="font-black text-slate-900 leading-tight mb-6"
+                style={{ fontSize: 'clamp(1.9rem, 3.8vw, 3.25rem)' }}>
+                Pare de perder clientes<br />
+                para o esquecimento.
+              </h2>
+              <p className="text-slate-500 text-lg leading-relaxed mb-12 max-w-xl mx-auto">
+                Comece hoje a transformar{' '}
+                <span className="text-slate-700 font-semibold">manutenção em relacionamento</span>{' '}
+                e relacionamento em{' '}
+                <span className="text-slate-700 font-semibold">faturamento.</span>
+              </p>
+              <CTALink href="/cadastro" label="Quero testar grátis" source={`${source}_cta_final`} className="py-4 px-12 text-base" />
+              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-10">
+                {['14 dias grátis', 'Sem cartão', 'Cancele quando quiser', 'Suporte em português'].map(t => (
+                  <span key={t} className="flex items-center gap-1.5 text-sm text-slate-400 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
           </Fade>
         </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────────────────────────── */}
+      {/* ══ FOOTER ══════════════════════════════════════════════════════ */}
       <footer className="border-t border-slate-200 py-12">
-        <div className={cn(containerCn, 'flex flex-col md:flex-row items-center justify-between gap-6')}>
+        <div className={cn(CONTAINER, 'flex flex-col md:flex-row items-center justify-between gap-6')}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
               <Wrench className="w-4 h-4 text-white" />
@@ -649,18 +638,13 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </footer>
 
-      {/* ── FLOATING CTA (mobile only) ──────────────────────────────── */}
+      {/* ══ CTA FLUTUANTE MOBILE ════════════════════════════════════════ */}
       <div className={cn(
         'md:hidden fixed bottom-0 inset-x-0 z-40 transition-all duration-300',
         showFloatingCTA ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       )}>
-        <div className="bg-white border-t border-slate-200 shadow-2xl p-4">
-          <CTALink
-            href="/cadastro"
-            label="Quero ver funcionando"
-            source={`${source}_floating_mobile`}
-            className="w-full py-4 px-6 text-base"
-          />
+        <div className="bg-white border-t border-slate-200 shadow-2xl px-5 py-4">
+          <CTALink href="/cadastro" label="Quero ver funcionando" source={`${source}_floating_mobile`} className="w-full py-4 px-6 text-base" />
         </div>
       </div>
     </div>
