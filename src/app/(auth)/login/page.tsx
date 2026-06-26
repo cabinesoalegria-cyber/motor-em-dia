@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Wrench, LogIn, Loader2, CheckCircle2 } from 'lucide-react';
@@ -31,11 +32,25 @@ function LoginForm() {
     if (!email || !password) { toast.error('Preencha todos os campos'); return; }
     setLoading(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error('E-mail ou senha incorretos');
       return;
     }
+    // Verifica se o usuário é master para redirecionar ao painel admin
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (usuario?.role === 'master') {
+        router.push('/admin');
+        return;
+      }
+    }
+    setLoading(false);
     router.push(redirect);
   }
 
