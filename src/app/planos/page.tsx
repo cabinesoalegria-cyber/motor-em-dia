@@ -112,8 +112,16 @@ export default function PlanosPage() {
   const isPending   = statusAtual === 'pendente_pagamento';
   const isAtivo     = statusAtual === 'ativo';
   const isTrial     = planoAtual === 'trial';
-  const hasActivePlan = ['starter', 'profissional', 'premium'].includes(planoAtual);
-  const currentPlan = PLANOS.find(p => p.key === planoAtual);
+
+  // Quando pendente: o plano "confirmado" é o anterior (antes da troca).
+  // O plano pendente é o que está no campo empresa.plano aguardando pagamento.
+  const planoPendente  = isPending ? planoAtual : null;  // plano que está aguardando pgto
+  const planoConfirmado = isPending
+    ? ((empresa as any)?.plano_anterior ?? 'trial') as string  // plano pago antes
+    : planoAtual;                                              // plano ativo confirmado
+
+  const hasActivePlan = ['starter', 'profissional', 'premium'].includes(planoConfirmado);
+  const currentPlan = PLANOS.find(p => p.key === planoConfirmado);
   const currentVal  = currentPlan?.valor ?? 0;
   // URL de pagamento vem do banco — persiste mesmo após reload
   const invoiceUrl  = empresa?.asaasInvoiceUrl ?? null;
@@ -212,7 +220,7 @@ export default function PlanosPage() {
       </div>
 
       {/* Pending payment banner */}
-      {isPending && hasActivePlan && currentPlan && (
+      {isPending && planoPendente && (
         <div className="rounded-2xl border-2 border-yellow-500/50 bg-yellow-500/10 p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 flex-1">
@@ -221,10 +229,11 @@ export default function PlanosPage() {
               </div>
               <div>
                 <p className="font-bold text-yellow-700 dark:text-yellow-300">
-                  ⏳ Pagamento pendente — Plano {currentPlan.nome}
+                  ⏳ Pagamento pendente — Plano {PLANOS.find(p => p.key === planoPendente)?.nome ?? planoPendente}
                 </p>
                 <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
-                  Seu plano ficará ativo assim que o pagamento for confirmado pelo Asaas.
+                  Seu plano só será ativado após a confirmação do pagamento pelo Asaas.
+                  {planoConfirmado !== 'trial' && ` Enquanto isso, seu plano ${currentPlan?.nome ?? planoConfirmado} permanece ativo.`}
                 </p>
               </div>
             </div>
@@ -240,7 +249,7 @@ export default function PlanosPage() {
         </div>
       )}
 
-      {/* Current plan highlight (when active) */}
+      {/* Current plan highlight (when truly active — confirmed) */}
       {hasActivePlan && isAtivo && currentPlan && (
         <div className={cn('rounded-2xl p-5 border-2 flex items-center gap-4', COR[currentPlan.cor].border, 'bg-[rgb(var(--card))]')}>
           <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0', COR[currentPlan.cor].bg)}>
@@ -274,14 +283,15 @@ export default function PlanosPage() {
         {PLANOS.map(plano => {
           const c = COR[plano.cor];
           const Icon = plano.icone;
-          const isAtual = planoAtual === plano.key;
+          const isAtual = planoConfirmado === plano.key;  // ativo confirmado
+          const isPendingThis = planoPendente === plano.key;  // aguardando pgto
           const isLoading = loading === plano.key;
           const targetLimit = PLAN_LIMITS[plano.key].clientes;
           const exceedsLimit = clientes.length > targetLimit;
           const upgradeVal = plano.valor - currentVal;
-          const isUpgrade = hasActivePlan && !isAtual && plano.valor > currentVal;
-          const isDowngrade = hasActivePlan && !isAtual && plano.valor < currentVal;
-          const blocked = exceedsLimit && !isAtual;
+          const isUpgrade   = hasActivePlan && !isAtual && !isPendingThis && plano.valor > currentVal;
+          const isDowngrade = hasActivePlan && !isAtual && !isPendingThis && plano.valor < currentVal;
+          const blocked = exceedsLimit && !isAtual && !isPendingThis;
 
           return (
             <div key={plano.key} className={cn(
@@ -292,11 +302,14 @@ export default function PlanosPage() {
               'border-[rgb(var(--card-border))] hover:border-orange-500/40',
               (plano as any).popular && !isAtual ? 'shadow-xl shadow-blue-500/10' : '',
             )}>
-              {(plano as any).popular && !isAtual && !blocked && (
+              {(plano as any).popular && !isAtual && !isPendingThis && !blocked && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">⭐ Mais Popular</div>
               )}
-              {isAtual && (
+              {isAtual && !isPendingThis && (
                 <div className={cn('absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-white text-xs font-bold rounded-full', c.btn.split(' ')[0])}>✓ Plano Atual</div>
+              )}
+              {isPendingThis && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">⏳ Aguard. Pgto</div>
               )}
               {blocked && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">⚠ Limite excedido</div>
@@ -341,9 +354,9 @@ export default function PlanosPage() {
                 ))}
               </ul>
 
-              {isAtual && isAtivo ? (
+              {isAtual && !isPendingThis && isAtivo ? (
                 <div className={cn('w-full py-3 rounded-xl text-center text-sm font-semibold', c.bg, c.text)}>✓ Plano Ativo</div>
-              ) : isAtual && isPending ? (
+              ) : isPendingThis ? (
                 <a
                   href={invoiceUrl ?? 'https://sandbox.asaas.com'}
                   target="_blank" rel="noopener noreferrer"
@@ -358,7 +371,7 @@ export default function PlanosPage() {
               ) : (
                 <button
                   onClick={() => openModal(plano.key as PlanoKey)}
-                  disabled={!!loading}
+                  disabled={!!loading || (isPending && !isPendingThis)}
                   className={cn(
                     'w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2',
                     'disabled:opacity-60 disabled:cursor-not-allowed',
@@ -411,7 +424,9 @@ export default function PlanosPage() {
                 <p className={cn('font-semibold', COR[currentPlan.cor].text)}>Plano {currentPlan.nome} — R$ {currentPlan.valor}/mês</p>
                 <p className="text-xs text-[rgb(var(--muted-foreground))]">Limite: {currentPlan.limiteClientes} · Clientes ativos: {clientes.length}</p>
               </div>
-              <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', COR[currentPlan.cor].bg, COR[currentPlan.cor].text)}>✓ Ativo</span>
+              <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', COR[currentPlan.cor].bg, COR[currentPlan.cor].text)}>
+                {isPending ? '⏳ Pend. pgto novo plano' : '✓ Ativo'}
+              </span>
             </div>
 
             {/* Usage bar */}

@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
           assinatura_id:     subscriptionId,
           asaas_customer_id: customerId,
           asaas_invoice_url: finalInvoiceUrl,
+          plano_anterior:    planoAntigo,   // ← guarda plano confirmado antes da troca
           plano,
           status:            'pendente_pagamento',
           trial_expira_em:   null,
