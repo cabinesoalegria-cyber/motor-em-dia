@@ -1,91 +1,27 @@
 /*
- * Lovable Design Tokens — Motor em Dia Landing
- * Scoped to .med-ld to avoid conflicts with dashboard/global styles.
- * Source: motor-em-dia-hub (Lovable repo)
+ * lovable.css — estilos da landing /landing
+ * Apenas tipografia display (Plus Jakarta Sans) e shadow utilitários
+ * que não existem em Tailwind v4 padrão.
+ * Scoped a .med-ld para não vazar no dashboard.
  */
 
-/* Plus Jakarta Sans from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700&display=swap');
-
-/* ─── Root tokens (scoped) ────────────────────────────────────────────────── */
-.med-ld {
-  --background: #ffffff;
-  --surface:    #f9fafb;
-  --surface-alt:#f3f4f6;
-  --card:       #ffffff;
-  --ink:        #111827;
-  --ink-soft:   #6b7280;
-  --border:     #e5e7eb;
-  --primary:    #f97316;
-  --primary-fg: #ffffff;
-  --primary-hv: #ea580c;
-
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background-color: var(--background);
-  color: var(--ink);
-}
-
-/* Heading font */
+/* Headings: Plus Jakarta Sans (font-display, igual ao Lovable) */
 .med-ld h1,
 .med-ld h2,
 .med-ld h3,
-.med-ld h4 {
-  font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+.med-ld h4,
+.med-ld .font-display {
+  font-family: var(--font-pjs, 'Inter'), ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.02em;
-  color: var(--ink);
 }
 
-/* ─── Custom shadows ─────────────────────────────────────────────────────── */
-.med-ld .shadow-soft     { box-shadow: 0 1px 2px 0 rgb(15 23 42/.04),0 1px 3px 0 rgb(15 23 42/.06); }
-.med-ld .shadow-card     { box-shadow: 0 4px 16px -4px rgb(15 23 42/.06),0 2px 6px -2px rgb(15 23 42/.04); }
-.med-ld .shadow-elevated { box-shadow: 0 24px 60px -24px rgb(15 23 42/.18),0 8px 20px -10px rgb(234 88 12/.18); }
-.med-ld .shadow-orange   { box-shadow: 0 12px 30px -10px rgb(234 88 12/.45); }
-
-/* Transition helpers */
-.med-ld .shadow-soft.hover\:shadow-card:hover,
-.med-ld .hover\:shadow-card:hover { box-shadow: 0 4px 16px -4px rgb(15 23 42/.06),0 2px 6px -2px rgb(15 23 42/.04); }
-
-/* ─── Background utilities ───────────────────────────────────────────────── */
-.med-ld .bg-background   { background-color: var(--background); }
-.med-ld .bg-surface      { background-color: var(--surface); }
-.med-ld .bg-surface-alt  { background-color: var(--surface-alt); }
-.med-ld .bg-card         { background-color: var(--card); }
-.med-ld .bg-ink          { background-color: var(--ink); }
-.med-ld .bg-primary      { background-color: var(--primary); }
-.med-ld .bg-primary-hover{ background-color: var(--primary-hv); }
-
-/* opacity variants */
-.med-ld .bg-background\/85{ background-color: rgba(255,255,255,0.85); }
-.med-ld .bg-primary\/10  { background-color: rgba(249,115,22,.10); }
-.med-ld .bg-primary\/20  { background-color: rgba(249,115,22,.20); }
-.med-ld .bg-primary\/30  { background-color: rgba(249,115,22,.30); }
-.med-ld .bg-ink\/5       { background-color: rgba(17,24,39,.05); }
-.med-ld .bg-white\/5     { background-color: rgba(255,255,255,.05); }
-.med-ld .bg-white\/10    { background-color: rgba(255,255,255,.10); }
-
-/* ─── Text utilities ─────────────────────────────────────────────────────── */
-.med-ld .text-foreground     { color: var(--ink); }
-.med-ld .text-ink            { color: var(--ink); }
-.med-ld .text-ink-soft       { color: var(--ink-soft); }
-.med-ld .text-primary        { color: var(--primary); }
-.med-ld .text-primary-foreground { color: var(--primary-fg); }
-.med-ld .text-primary\/15    { color: rgba(249,115,22,.15); }
-
-/* ─── Border utilities ───────────────────────────────────────────────────── */
-.med-ld .border-border       { border-color: var(--border); }
-.med-ld .border-border\/70   { border-color: rgba(229,231,235,.70); }
-.med-ld .border-primary\/20  { border-color: rgba(249,115,22,.20); }
-.med-ld .border-white\/10    { border-color: rgba(255,255,255,.10); }
-
-/* ─── Hover utilities ────────────────────────────────────────────────────── */
-.med-ld .hover\:bg-primary-hover:hover { background-color: var(--primary-hv); }
-.med-ld .hover\:bg-surface:hover       { background-color: var(--surface); }
-.med-ld .hover\:border-ink\/30:hover   { border-color: rgba(17,24,39,.30); }
-.med-ld .hover\:text-ink:hover         { color: var(--ink); }
-.med-ld .hover\:text-primary:hover     { color: var(--primary); }
-
-/* ─── Font utility ───────────────────────────────────────────────────────── */
-.med-ld .font-display {
-  font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+/* Custom shadows do Lovable — não existem no Tailwind v4 padrão */
+.med-ld .shadow-soft {
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+}
+.med-ld .shadow-card {
+  box-shadow: 0 4px 16px -4px rgb(15 23 42 / 0.06), 0 2px 6px -2px rgb(15 23 42 / 0.04);
+}
+.med-ld .hover\:shadow-card:hover {
+  box-shadow: 0 4px 16px -4px rgb(15 23 42 / 0.06), 0 2px 6px -2px rgb(15 23 42 / 0.04);
 }
