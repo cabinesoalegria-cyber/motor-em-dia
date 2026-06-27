@@ -45,16 +45,11 @@ function Fade({ children, delay = 0, direction = 'up', className = '' }: {
   );
 }
 
-// ── Container padrão ─────────────────────────────────────────────────────────
-// max-w-7xl ≈ 1280px, px-6 mobile, lg:px-8 desktop
-const CONTAINER = 'max-w-7xl mx-auto px-6 lg:px-8';
+/* ─── Constantes de layout ─────────────────────────────────────────────────── */
+// Container com px correto em todos os breakpoints — evita conteúdo colado nas bordas
+const CONTAINER = 'mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8';
 
-// ── Espaçamento padrão de seções ─────────────────────────────────────────────────────────
-const SECTION = 'py-20 md:py-24 lg:py-32';
-// bg-slate-50 com opacidade TOTAL — op70 sobre branco é quase invisível
-const SECTION_MUTED = 'py-20 md:py-24 lg:py-32 bg-slate-50';
-
-// ── CTA Link com tracking ─────────────────────────────────────────────────────
+/* ─── CTA Link com tracking ────────────────────────────────────────────────── */
 function CTALink({ href, label, primary = true, className = '', source = '' }: {
   href: string; label: string; primary?: boolean; className?: string; source?: string;
 }) {
@@ -74,30 +69,27 @@ function CTALink({ href, label, primary = true, className = '', source = '' }: {
   );
 }
 
-// ── Cabeçalho de seção padronizado ────────────────────────────────────────────
+/* ─── Cabeçalho de seção padronizado ──────────────────────────────────────── */
 function SectionHeader({
-  label, title, subtitle, align = 'left', className = ''
+  label, title, subtitle, align = 'center', className = ''
 }: {
-  label: string; title: string; subtitle: string;
+  label: string; title: string; subtitle?: string;
   align?: 'left' | 'center'; className?: string;
 }) {
   return (
     <Fade className={cn(
       align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl',
-      'mb-12 md:mb-16',
+      'mb-10 md:mb-14 lg:mb-16',
       className
     )}>
-      <span className="text-orange-600 text-xs font-bold uppercase tracking-widest">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
         {label}
-      </span>
-      <h2
-        className="mt-4 font-black text-slate-900 leading-tight"
-        style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.75rem)' }}
-      >
+      </p>
+      <h2 className="mt-3 font-bold tracking-tight text-slate-950 leading-tight text-3xl sm:text-4xl lg:text-5xl">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-5 text-slate-500 text-base md:text-lg leading-relaxed">
+        <p className="mt-5 text-base md:text-lg leading-8 text-slate-600">
           {subtitle}
         </p>
       )}
@@ -105,7 +97,7 @@ function SectionHeader({
   );
 }
 
-// ── ROI Calculator ────────────────────────────────────────────────────────────
+/* ─── ROI Calculator ───────────────────────────────────────────────────────── */
 function Calculator() {
   const [vehicles, setVehicles] = useState(40);
   const [ticket, setTicket] = useState(350);
@@ -122,12 +114,12 @@ function Calculator() {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="border-b border-slate-100 px-8 py-7">
+      <div className="border-b border-slate-100 px-6 md:px-8 py-6 md:py-7">
         <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-2">Calculadora de impacto</p>
-        <h3 className="text-slate-900 text-2xl font-black">Quanto faturamento está escapando?</h3>
+        <h3 className="text-slate-900 text-xl md:text-2xl font-black">Quanto faturamento está escapando?</h3>
       </div>
-      <div className="p-8 md:p-10 grid md:grid-cols-2 gap-10 md:gap-14">
-        <div className="space-y-10">
+      <div className="p-6 md:p-10 grid md:grid-cols-2 gap-8 md:gap-14">
+        <div className="space-y-8 md:space-y-10">
           <div>
             <div className="flex justify-between items-center mb-4">
               <label className="text-slate-700 text-sm font-semibold">Veículos atendidos / mês</label>
@@ -159,13 +151,13 @@ function Calculator() {
           </div>
         </div>
         <div className="flex flex-col gap-5 justify-center">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-7">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 md:p-7">
             <p className="text-slate-500 text-sm mb-2">Faturamento recuperado / mês</p>
-            <p className="text-slate-900 text-4xl font-black">R$ {monthly.toLocaleString('pt-BR')}</p>
+            <p className="text-slate-900 text-3xl md:text-4xl font-black">R$ {monthly.toLocaleString('pt-BR')}</p>
           </div>
-          <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-7">
+          <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 md:p-7">
             <p className="text-orange-700 text-sm mb-2 font-medium">Faturamento recuperado / ano</p>
-            <p className="text-orange-600 text-5xl font-black">R$ {annual.toLocaleString('pt-BR')}</p>
+            <p className="text-orange-600 text-4xl md:text-5xl font-black">R$ {annual.toLocaleString('pt-BR')}</p>
             <p className="text-orange-500/70 text-xs mt-2">apenas com lembretes automáticos</p>
           </div>
           <CTALink href="/cadastro" label="Quero recuperar esses clientes" source="calculator" className="py-4 px-6 w-full" />
@@ -175,7 +167,7 @@ function Calculator() {
   );
 }
 
-// ── Hero Mockup ───────────────────────────────────────────────────────────────
+/* ─── Hero Mockup ──────────────────────────────────────────────────────────── */
 function HeroMockup() {
   return (
     <div className="relative w-full max-w-[400px]" style={{ perspective: '1100px' }}>
@@ -249,7 +241,7 @@ function HeroMockup() {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+/* ─── Main Component ───────────────────────────────────────────────────────── */
 export default function LandingPageContent({ source = 'landing' }: { source?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -265,10 +257,10 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
   }, []);
 
   return (
-    <div className="bg-white text-slate-900 min-h-screen overflow-x-hidden"
+    <div className="w-full overflow-x-hidden bg-white text-slate-900 min-h-screen"
       style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
-      {/* ══ NAVBAR ══════════════════════════════════════════════════════ */}
+      {/* ══ NAVBAR ══════════════════════════════════════════════════════════ */}
       <header className={cn(
         'fixed top-0 inset-x-0 z-50 transition-all duration-300',
         scrolled ? 'bg-white/96 backdrop-blur-xl border-b border-slate-200 shadow-sm' : 'bg-white/80 backdrop-blur-sm'
@@ -313,19 +305,17 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         )}
       </header>
 
-      {/* ══ HERO — 100vh ════════════════════════════════════════════════ */}
-      <section
-        className="relative flex items-center overflow-hidden"
-        style={{ minHeight: '100vh', paddingTop: '64px' }}
-      >
+      {/* ══ HERO ════════════════════════════════════════════════════════════ */}
+      <section className="relative flex items-center overflow-hidden"
+        style={{ minHeight: '100vh', paddingTop: '64px' }}>
         {/* Warm glow */}
         <div className="pointer-events-none absolute top-0 inset-x-0 h-[65vh] opacity-50"
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% -5%, #ffedd5, transparent)' }} />
-        {/* Bottom fade — separa visualmente a Hero da próxima seção */}
+        {/* Bottom fade */}
         <div className="pointer-events-none absolute bottom-0 inset-x-0 h-24"
-          style={{ background: 'linear-gradient(to bottom, transparent, rgba(248,250,252,0.6))' }} />
+          style={{ background: 'linear-gradient(to bottom, transparent, rgba(248,250,252,0.5))' }} />
 
-        <div className={cn(CONTAINER, 'relative z-10 py-20 lg:py-28 w-full')}>
+        <div className={cn(CONTAINER, 'relative z-10 py-20 lg:py-28')}>
           <div className="grid lg:grid-cols-2 gap-12 xl:gap-24 items-center">
 
             {/* Copy */}
@@ -387,10 +377,10 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ FEATURE STRIP — separador ══════════════════════════════════ */}
-      <div className="border-y border-slate-100 bg-slate-50">
-        <div className={cn(CONTAINER, 'py-6')}>
-          <div className="flex flex-wrap justify-center gap-x-10 gap-y-3.5">
+      {/* ══ FEATURE STRIP ═══════════════════════════════════════════════════ */}
+      <div className="border-y border-slate-200 bg-white">
+        <div className={cn(CONTAINER, 'py-6 md:py-8')}>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 md:gap-x-10">
             {[
               { icon: Bell, label: 'Lembretes automáticos' },
               { icon: Car, label: 'Histórico de veículos' },
@@ -408,15 +398,15 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </div>
 
-      {/* ══ PROBLEMA — bg levemente alternado ══════════════════════════ */}
-      <section id="problema" className={SECTION_MUTED}>
+      {/* ══ O PROBLEMA ══════════════════════════════════════════════════════ */}
+      <section id="problema" className="py-16 md:py-24 lg:py-32 bg-slate-50">
         <div className={CONTAINER}>
           <SectionHeader
             label="O problema"
             title="Quantos clientes sua oficina já perdeu por esquecimento?"
             subtitle="Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa."
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
             {[
               { icon: Clock, title: 'Revisões esquecidas', desc: 'O cliente promete "passar semana que vem" e nunca mais volta. Sem um lembrete, ele simplesmente esquece.' },
               { icon: RotateCcw, title: 'Trocas de óleo perdidas', desc: 'A troca de óleo é o serviço mais recorrente. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
@@ -426,11 +416,11 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               { icon: MessageSquare, title: 'WhatsApp virou bagunça', desc: 'Clientes, fornecedores, família — tudo misturado. Impossível acompanhar quem precisa de atenção hoje.' },
             ].map((item, i) => (
               <Fade key={i} delay={i * 55}>
-                <div className="bg-white border border-slate-200 rounded-2xl p-7 md:p-8 hover:border-orange-200 hover:shadow-md transition-all duration-300 h-full">
-                  <div className="w-11 h-11 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center mb-6">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 hover:border-orange-200 hover:shadow-md transition-all duration-300 h-full">
+                  <div className="w-11 h-11 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center mb-5">
                     <item.icon className="w-5 h-5 text-red-500" />
                   </div>
-                  <h3 className="text-slate-900 font-bold text-base mb-3">{item.title}</h3>
+                  <h3 className="text-slate-900 font-bold text-base mb-2">{item.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </Fade>
@@ -439,8 +429,8 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ SOLUÇÃO — fundo branco ══════════════════════════════════════ */}
-      <section id="solucao" className={SECTION}>
+      {/* ══ A SOLUÇÃO ═══════════════════════════════════════════════════════ */}
+      <section id="solucao" className="py-16 md:py-24 lg:py-32 bg-white">
         <div className={CONTAINER}>
           <SectionHeader
             label="A solução"
@@ -448,8 +438,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             subtitle="Um fluxo simples que transforma cada serviço realizado em uma oportunidade de retorno garantido."
             align="center"
           />
-
-          <div className="max-w-lg mx-auto mt-12 md:mt-16">
+          <div className="mx-auto max-w-lg">
             {[
               { icon: Car, title: 'Cadastro do veículo', desc: 'Cliente, carro e quilometragem registrados em 2 minutos. Histórico centralizado para sempre.' },
               { icon: FileText, title: 'Registro da manutenção', desc: 'OS criada, serviços e próximo prazo de retorno definidos com precisão.' },
@@ -478,22 +467,20 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               </Fade>
             ))}
           </div>
-
-          <Fade className="flex justify-center mt-14 md:mt-16">
+          <Fade className="flex justify-center mt-12 md:mt-16">
             <CTALink href="/cadastro" label="Quero ver isso funcionando" source={`${source}_solucao_cta`} className="py-4 px-8 text-[15px]" />
           </Fade>
         </div>
       </section>
 
-      {/* ══ BENEFÍCIOS — fundo alternado ═══════════════════════════════ */}
-      <section id="beneficios" className={SECTION_MUTED}>
+      {/* ══ BENEFÍCIOS ══════════════════════════════════════════════════════ */}
+      <section id="beneficios" className="py-16 md:py-24 lg:py-32 bg-slate-50">
         <div className={CONTAINER}>
           <SectionHeader
             label="Benefícios"
-            title={`O que muda na sua oficina\na partir do primeiro mês`}
-            subtitle=""
+            title="O que muda na sua oficina a partir do primeiro mês"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
             {[
               { icon: TrendingUp, title: 'Mais clientes retornando', desc: 'Clientes avisados no momento certo voltam mais. Não tem segredo: comunicação = fidelização.' },
               { icon: DollarSign, title: 'Faturamento recorrente', desc: 'Cada cliente fidelizado gera receita previsível todo mês, sem depender de novos anúncios.' },
@@ -503,11 +490,11 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               { icon: BarChart3, title: 'Gestão mais eficiente', desc: 'Dashboard completo: OS abertas, revisões próximas e faturamento do mês em uma tela só.' },
             ].map((item, i) => (
               <Fade key={i} delay={i * 55}>
-                <div className="bg-white border border-slate-200 rounded-2xl p-7 md:p-8 hover:border-orange-200 hover:shadow-md transition-all duration-300 h-full">
-                  <div className="w-11 h-11 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mb-6">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 hover:border-orange-200 hover:shadow-md transition-all duration-300 h-full">
+                  <div className="w-11 h-11 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mb-5">
                     <item.icon className="w-5 h-5 text-orange-500" />
                   </div>
-                  <h3 className="text-slate-900 font-bold text-base mb-3">{item.title}</h3>
+                  <h3 className="text-slate-900 font-bold text-base mb-2">{item.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </Fade>
@@ -516,8 +503,8 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ CALCULADORA — fundo branco ═════════════════════════════════ */}
-      <section id="calculadora" className={SECTION}>
+      {/* ══ CALCULADORA ═════════════════════════════════════════════════════ */}
+      <section id="calculadora" className="py-16 md:py-24 lg:py-32 bg-white">
         <div className={CONTAINER}>
           <SectionHeader
             label="Calculadora"
@@ -525,22 +512,22 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             subtitle="Ajuste os valores e veja a projeção de faturamento que pode ser recuperado com lembretes automáticos."
             align="center"
           />
-          <div className="max-w-4xl mx-auto">
+          <div className="mx-auto max-w-4xl">
             <Fade delay={100}><Calculator /></Fade>
           </div>
         </div>
       </section>
 
-      {/* ══ O SISTEMA — fundo alternado ════════════════════════════════ */}
-      <section id="como-funciona" className={SECTION_MUTED}>
+      {/* ══ O SISTEMA ═══════════════════════════════════════════════════════ */}
+      <section id="como-funciona" className="py-16 md:py-24 lg:py-32 bg-slate-50">
         <div className={CONTAINER}>
           <SectionHeader
             label="O sistema"
-            title={`Tudo que sua oficina precisa,\nem uma tela só`}
+            title="Tudo que sua oficina precisa, em uma tela só"
             subtitle="Interface projetada para oficinas mecânicas. Simples, rápida e completa."
             align="center"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
             {[
               { icon: BarChart3, label: 'Dashboard', desc: 'Visão completa do negócio: OS abertas, faturamento e alertas em tempo real.' },
               { icon: Car, label: 'Veículos', desc: 'Histórico completo de cada carro atendido. Marca, modelo, placa, quilometragem.' },
@@ -550,11 +537,11 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               { icon: BarChart3, label: 'Relatórios', desc: 'Serviços mais rentáveis, clientes frequentes, performance por período.' },
             ].map((item, i) => (
               <Fade key={i} delay={i * 55}>
-                <div className="group rounded-2xl border border-slate-200 bg-white p-8 hover:border-orange-200 hover:shadow-md transition-all duration-300">
-                  <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-6 shadow-sm shadow-orange-200 group-hover:scale-105 transition-transform duration-300">
+                <div className="group rounded-2xl border border-slate-200 bg-white p-5 md:p-6 hover:border-orange-200 hover:shadow-md transition-all duration-300">
+                  <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-5 shadow-sm shadow-orange-200 group-hover:scale-105 transition-transform duration-300">
                     <item.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-slate-900 font-bold text-lg mb-3">{item.label}</h3>
+                  <h3 className="text-slate-900 font-bold text-lg mb-2">{item.label}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </Fade>
@@ -563,8 +550,8 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ CONFIANÇA — fundo branco ════════════════════════════════════ */}
-      <section className={SECTION}>
+      {/* ══ SEGURANÇA ═══════════════════════════════════════════════════════ */}
+      <section id="seguranca" className="py-16 md:py-24 lg:py-32 bg-white">
         <div className={CONTAINER}>
           <SectionHeader
             label="Segurança"
@@ -572,7 +559,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
             subtitle="Sem instalação. Sem complicação. Começa a funcionar no primeiro dia."
             align="center"
           />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 md:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5 md:gap-6 lg:gap-8">
             {[
               { icon: Cloud, title: '100% online', desc: 'Sem instalar nada' },
               { icon: Smartphone, title: 'Celular e computador', desc: 'Qualquer dispositivo' },
@@ -581,7 +568,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
               { icon: Zap, title: 'Interface simples', desc: 'Pronto no primeiro dia' },
             ].map((item, i) => (
               <Fade key={i} delay={i * 55}>
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center hover:border-orange-200 transition-colors h-full">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 text-center hover:border-orange-200 transition-colors h-full">
                   <div className="w-11 h-11 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <item.icon className="w-5 h-5 text-orange-500" />
                   </div>
@@ -594,22 +581,22 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ CTA FINAL — fundo levemente destacado ══════════════════════ */}
-      <section className="py-20 md:py-24 lg:py-32 bg-slate-50 border-t border-slate-100">
+      {/* ══ CTA FINAL — fundo escuro ═════════════════════════════════════════ */}
+      <section className="py-16 md:py-24 lg:py-32 bg-slate-950">
         <div className={cn(CONTAINER, 'text-center')}>
           <Fade>
-            <div className="max-w-3xl mx-auto">
+            <div className="mx-auto max-w-3xl">
               <div className="w-14 h-1 bg-orange-500 rounded-full mx-auto mb-10 md:mb-14" />
-              <h2 className="font-black text-slate-900 leading-tight mb-6"
+              <h2 className="font-black text-white leading-tight mb-6"
                 style={{ fontSize: 'clamp(1.9rem, 3.8vw, 3.25rem)' }}>
                 Pare de perder clientes<br />
                 para o esquecimento.
               </h2>
-              <p className="text-slate-500 text-lg leading-relaxed mb-12 max-w-xl mx-auto">
+              <p className="text-slate-400 text-lg leading-relaxed mb-12 max-w-xl mx-auto">
                 Comece hoje a transformar{' '}
-                <span className="text-slate-700 font-semibold">manutenção em relacionamento</span>{' '}
+                <span className="text-slate-200 font-semibold">manutenção em relacionamento</span>{' '}
                 e relacionamento em{' '}
-                <span className="text-slate-700 font-semibold">faturamento.</span>
+                <span className="text-slate-200 font-semibold">faturamento.</span>
               </p>
               <CTALink href="/cadastro" label="Quero testar grátis" source={`${source}_cta_final`} className="py-4 px-12 text-base" />
               <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-10">
@@ -625,8 +612,8 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </section>
 
-      {/* ══ FOOTER ══════════════════════════════════════════════════════ */}
-      <footer className="border-t border-slate-200 py-12">
+      {/* ══ FOOTER ══════════════════════════════════════════════════════════ */}
+      <footer className="py-8 bg-white border-t border-slate-200">
         <div className={cn(CONTAINER, 'flex flex-col md:flex-row items-center justify-between gap-6')}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -644,7 +631,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
         </div>
       </footer>
 
-      {/* ══ CTA FLUTUANTE MOBILE ════════════════════════════════════════ */}
+      {/* ══ CTA FLUTUANTE MOBILE ════════════════════════════════════════════ */}
       <div className={cn(
         'md:hidden fixed bottom-0 inset-x-0 z-40 transition-all duration-300',
         showFloatingCTA ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
