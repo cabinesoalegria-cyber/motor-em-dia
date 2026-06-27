@@ -1,21 +1,63 @@
 /*
- * lovable.css — estilos da landing /landing
- * Apenas tipografia display (Plus Jakarta Sans) e shadow utilitários
- * que não existem em Tailwind v4 padrão.
- * Scoped a .med-ld para não vazar no dashboard.
+ * lovable.css — design tokens da landing /landing
+ * Scoped a .med-ld. Não afeta o dashboard.
+ *
+ * Fonte: motor-em-dia-hub/src/styles.css
+ * Corrige: border-radius, cor primária, bg escuro, sombras, tipografia.
  */
 
-/* Headings: Plus Jakarta Sans (font-display, igual ao Lovable) */
+/* ── Tipografia display (Plus Jakarta Sans via next/font CSS var) ──────── */
 .med-ld h1,
 .med-ld h2,
 .med-ld h3,
 .med-ld h4,
 .med-ld .font-display {
-  font-family: var(--font-pjs, 'Inter'), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-pjs, 'Plus Jakarta Sans', 'Inter'), ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
 
-/* Custom shadows do Lovable — não existem no Tailwind v4 padrão */
+/* ── Border radius — Lovable usa --radius:0.75rem com @theme inline ──────
+ *   rounded-lg  → var(--radius)          = 0.75rem  (Tailwind default: 0.5rem)
+ *   rounded-xl  → calc(--radius + 4px)   = 1rem     (Tailwind default: 0.75rem)
+ *   rounded-2xl → calc(--radius + 8px)   = 1.25rem  (Tailwind default: 1rem)
+ *   rounded-3xl → calc(--radius + 12px)  = 1.5rem   (Tailwind default: 1.5rem ✓)
+ * ────────────────────────────────────────────────────────────────────────── */
+.med-ld .rounded-sm  { border-radius: 0.5rem; }
+.med-ld .rounded-md  { border-radius: 0.625rem; }
+.med-ld .rounded-lg  { border-radius: 0.75rem; }
+.med-ld .rounded-xl  { border-radius: 1rem; }
+.med-ld .rounded-2xl { border-radius: 1.25rem; }
+.med-ld .rounded-3xl { border-radius: 1.5rem; }
+
+/* ── Cor primária — Lovable: oklch(0.68 0.18 45)
+ *   ≠ orange-500 (#f97316 = oklch(0.705 0.213 47.6))
+ *   A cor Lovable é mais escura e menos saturada (burnt orange)
+ * ────────────────────────────────────────────────────────────────────────── */
+.med-ld .bg-orange-500        { background-color: oklch(0.68 0.18 45); }
+.med-ld .bg-orange-600        { background-color: oklch(0.62 0.19 42); }
+.med-ld .text-orange-500      { color: oklch(0.68 0.18 45); }
+.med-ld .text-orange-400      { color: oklch(0.68 0.18 45); }
+.med-ld .text-orange-600      { color: oklch(0.62 0.19 42); }
+.med-ld .border-orange-500    { border-color: oklch(0.68 0.18 45); }
+.med-ld .accent-orange-500    { accent-color: oklch(0.68 0.18 45); }
+
+/* opacity variants */
+.med-ld .bg-orange-500\/10   { background-color: oklch(0.68 0.18 45 / 0.10); }
+.med-ld .bg-orange-500\/20   { background-color: oklch(0.68 0.18 45 / 0.20); }
+.med-ld .bg-orange-500\/30   { background-color: oklch(0.68 0.18 45 / 0.30); }
+.med-ld .text-orange-500\/15 { color: oklch(0.68 0.18 45 / 0.15); }
+.med-ld .border-orange-500\/20 { border-color: oklch(0.68 0.18 45 / 0.20); }
+
+/* hover */
+.med-ld .hover\:text-orange-500:hover { color: oklch(0.68 0.18 45); }
+.med-ld .hover\:bg-orange-600:hover   { background-color: oklch(0.62 0.19 42); }
+
+/* ── Background escuro — Lovable ink: oklch(0.18 0.04 260)
+ *   gray-900 = oklch(0.208 ...) — perceptivelmente mais claro
+ * ────────────────────────────────────────────────────────────────────────── */
+.med-ld .bg-gray-900 { background-color: oklch(0.18 0.04 260); }
+
+/* ── Sombras customizadas do Lovable ─────────────────────────────────────── */
 .med-ld .shadow-soft {
   box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
 }

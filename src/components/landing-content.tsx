@@ -488,7 +488,7 @@ function CalculatorSection() {
                 <PieChart className="h-3.5 w-3.5" /> Estimativa
               </span>
               <p className="mt-5 text-sm text-white/70">Faturamento perdido por mês</p>
-              <p className="mt-2 font-display text-5xl font-extrabold text-orange-400">{fmt(lost)}</p>
+              <p className="mt-2 font-display text-5xl font-extrabold text-orange-500">{fmt(lost)}</p>
               <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
                 <p className="text-sm text-white/70">Em 12 meses</p>
                 <p className="mt-1 font-display text-2xl font-bold">{fmt(yearly)}</p>
