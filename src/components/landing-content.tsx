@@ -1,12 +1,41 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+/**
+ * Landing page do Motor em Dia
+ * Portada do repositório Lovable (motor-em-dia-hub) para Next.js.
+ * Design tokens mapeados para Tailwind. Links adaptados para Next.js Link.
+ */
+
 import Link from 'next/link';
+import { useState, useMemo } from 'react';
 import {
-  Wrench, Bell, Car, FileText, BarChart3, MessageSquare,
-  CheckCircle2, Shield, Smartphone, Cloud, TrendingUp,
-  DollarSign, Zap, ArrowRight, Menu, X, Users, Star,
-  Clock, RotateCcw,
+  Bell,
+  Car,
+  FileText,
+  BarChart3,
+  DollarSign,
+  MessageSquare,
+  ShieldCheck,
+  Smartphone,
+  Cloud,
+  Sparkles,
+  Check,
+  ArrowRight,
+  AlertTriangle,
+  Clock,
+  History,
+  Users,
+  Wrench,
+  PieChart,
+  LayoutDashboard,
+  ClipboardList,
+  TrendingUp,
+  Send,
+  Menu,
+  X,
+  UserMinus,
+  FolderOpen,
+  Droplets,
 } from 'lucide-react';
 import { trackEvent } from '@/components/analytics';
 
@@ -15,369 +44,249 @@ function cn(...cls: (string | boolean | undefined)[]) {
   return cls.filter(Boolean).join(' ');
 }
 
-function useInView(threshold = 0.06) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!ref.current) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
-function Fade({
-  children, delay = 0, direction = 'up', className = '',
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  direction?: 'up' | 'left' | 'right' | 'none';
-  className?: string;
-}) {
-  const { ref, visible } = useInView();
-  const from = { up: 'translate-y-5', left: '-translate-x-5', right: 'translate-x-5', none: '' };
+/* ─── Container padrão do Lovable ────────────────────────────────────────── */
+function Container({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={cn(
-        'transition-all duration-700 ease-out',
-        visible ? 'opacity-100 translate-x-0 translate-y-0' : `opacity-0 ${from[direction]}`,
-        className,
-      )}
-    >
+    <div className={cn('mx-auto w-full max-w-6xl px-5 sm:px-8', className)}>
       {children}
     </div>
   );
 }
 
-/* ─── Constante de container ─────────────────────────────────────────────── */
-// max-w-6xl = 1152px — mais estreito que 7xl, dá margens maiores em telas largas
-// px-4 mobile (16px), sm:px-6 (24px), lg:px-8 (32px)
-const W = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8';
+/* ─── Section label pill ─────────────────────────────────────────────────── */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-600">
+      <Sparkles className="h-3.5 w-3.5" />
+      {children}
+    </span>
+  );
+}
 
-/* ─── CTALink ────────────────────────────────────────────────────────────── */
-function CTALink({
-  href, label, primary = true, className = '', source = '',
+/* ─── CTA Buttons ────────────────────────────────────────────────────────── */
+function PrimaryLink({
+  href, children, className = '', source = '',
 }: {
-  href: string; label: string; primary?: boolean; className?: string; source?: string;
+  href: string; children: React.ReactNode; className?: string; source?: string;
 }) {
   return (
     <Link
       href={href}
-      onClick={() => trackEvent('cta_click', { button_label: label, source })}
+      onClick={() => trackEvent('cta_click', { source })}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200',
-        primary
-          ? 'bg-orange-500 text-white shadow-sm shadow-orange-200 hover:bg-orange-600 hover:shadow-md hover:shadow-orange-200 hover:-translate-y-px'
-          : 'border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+        'inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-semibold text-white',
+        'shadow-[0_12px_30px_-10px_rgba(234,88,12,0.45)]',
+        'transition-all hover:bg-orange-600 hover:-translate-y-0.5',
         className,
       )}
     >
-      {label}
-      {primary && <ArrowRight className="w-4 h-4 flex-shrink-0" />}
+      {children}
     </Link>
   );
 }
 
-/* ─── SectionHeader ──────────────────────────────────────────────────────── */
-function SectionHeader({
-  label, title, subtitle, align = 'center',
+function SecondaryLink({
+  href, children, className = '',
 }: {
-  label: string;
-  title: string;
-  subtitle?: string;
-  align?: 'left' | 'center';
+  href: string; children: React.ReactNode; className?: string;
 }) {
-  const base = align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl';
   return (
-    <Fade className={cn(base, 'mb-12 md:mb-16')}>
-      <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-600">
-        {label}
-      </p>
-      <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-        {title}
-      </h2>
-      {subtitle && (
-        <p className="mt-5 text-base leading-7 text-slate-600 md:text-lg md:leading-8">
-          {subtitle}
-        </p>
+    <Link
+      href={href}
+      className={cn(
+        'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-900',
+        'transition-all hover:border-slate-300 hover:bg-slate-50',
+        className,
       )}
-    </Fade>
+    >
+      {children}
+    </Link>
   );
 }
 
-/* ─── Calculator ─────────────────────────────────────────────────────────── */
-function Calculator() {
-  const [vehicles, setVehicles] = useState(40);
-  const [ticket, setTicket] = useState(350);
-  const [interacted, setInteracted] = useState(false);
-  const rate = 0.3;
-  const recovered = Math.round(vehicles * rate);
-  const monthly = recovered * ticket;
-  const annual = monthly * 12;
-
-  function change(field: 'v' | 't', val: number) {
-    if (field === 'v') setVehicles(val); else setTicket(val);
-    if (!interacted) { setInteracted(true); trackEvent('calculator_use', { vehicles, ticket }); }
-  }
-
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-6 py-6 md:px-8 md:py-7">
-        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-orange-600">
-          Calculadora de impacto
-        </p>
-        <h3 className="text-xl font-black text-slate-900 md:text-2xl">
-          Quanto faturamento está escapando?
-        </h3>
+    <div className={cn(
+      'rounded-2xl border border-slate-200 bg-white p-6',
+      'shadow-[0_1px_3px_0_rgba(15,23,42,0.06)]',
+      'transition-all hover:shadow-[0_4px_16px_-4px_rgba(15,23,42,0.08)]',
+      className,
+    )}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Icon Badge ─────────────────────────────────────────────────────────── */
+function IconBadge({
+  children, tone = 'primary',
+}: {
+  children: React.ReactNode; tone?: 'primary' | 'ink';
+}) {
+  const cls = tone === 'primary'
+    ? 'bg-orange-500/10 text-orange-500'
+    : 'bg-slate-900/5 text-slate-700';
+  return (
+    <div className={cn('mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl', cls)}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Calculator Field ───────────────────────────────────────────────────── */
+function Field({
+  label, value, onChange, min, max, step, prefix, suffix,
+}: {
+  label: string; value: number; onChange: (n: number) => void;
+  min: number; max: number; step: number; prefix?: string; suffix?: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-sm font-semibold text-slate-900">{label}</label>
+        <span className="rounded-lg bg-slate-50 px-3 py-1 text-sm font-bold text-slate-900">
+          {prefix ? `${prefix} ` : ''}{value.toLocaleString('pt-BR')}{suffix ? ` ${suffix}` : ''}
+        </span>
       </div>
-
-      <div className="grid gap-8 p-6 md:grid-cols-2 md:gap-12 md:p-10">
-        {/* Sliders */}
-        <div className="space-y-8">
-          {/* Veículos */}
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <label className="text-sm font-semibold text-slate-700">
-                Veículos atendidos / mês
-              </label>
-              <span className="min-w-[48px] rounded-lg border border-orange-100 bg-orange-50 px-3 py-1 text-center text-lg font-black text-slate-900">
-                {vehicles}
-              </span>
-            </div>
-            <input
-              type="range" min={10} max={200} step={5} value={vehicles}
-              onChange={e => change('v', Number(e.target.value))}
-              className="w-full accent-orange-500"
-            />
-            <div className="mt-2 flex justify-between text-xs font-medium text-slate-400">
-              <span>10</span><span>200</span>
-            </div>
-          </div>
-
-          {/* Ticket */}
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <label className="text-sm font-semibold text-slate-700">
-                Ticket médio por serviço
-              </label>
-              <span className="rounded-lg border border-orange-100 bg-orange-50 px-3 py-1 text-lg font-black text-slate-900">
-                R${ticket.toLocaleString('pt-BR')}
-              </span>
-            </div>
-            <input
-              type="range" min={150} max={2000} step={50} value={ticket}
-              onChange={e => change('t', Number(e.target.value))}
-              className="w-full accent-orange-500"
-            />
-            <div className="mt-2 flex justify-between text-xs font-medium text-slate-400">
-              <span>R$ 150</span><span>R$ 2.000</span>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm leading-relaxed text-slate-500">
-              Estimativa conservadora:{' '}
-              <span className="font-semibold text-slate-800">{recovered} clientes</span>{' '}
-              ({Math.round(rate * 100)}% dos atendidos) poderiam retornar todo mês com lembretes automáticos.
-            </p>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="flex flex-col justify-center gap-5">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-6">
-            <p className="mb-2 text-sm text-slate-500">Faturamento recuperado / mês</p>
-            <p className="text-4xl font-black text-slate-900">
-              R$ {monthly.toLocaleString('pt-BR')}
-            </p>
-          </div>
-          <div className="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6">
-            <p className="mb-2 text-sm font-medium text-orange-700">Faturamento recuperado / ano</p>
-            <p className="text-5xl font-black text-orange-600">
-              R$ {annual.toLocaleString('pt-BR')}
-            </p>
-            <p className="mt-2 text-xs text-orange-500/70">apenas com lembretes automáticos</p>
-          </div>
-          <CTALink
-            href="/cadastro"
-            label="Quero recuperar esses clientes"
-            source="calculator"
-            className="w-full py-4 px-6"
-          />
-        </div>
+      <input
+        type="range"
+        min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-orange-500"
+      />
+      <div className="mt-1 flex justify-between text-xs text-slate-400">
+        <span>{prefix ? `${prefix} ` : ''}{min}{suffix ? ` ${suffix}` : ''}</span>
+        <span>{prefix ? `${prefix} ` : ''}{max}{suffix ? ` ${suffix}` : ''}</span>
       </div>
     </div>
   );
 }
 
-/* ─── HeroMockup ─────────────────────────────────────────────────────────── */
+/* ─── Hero Mockup ────────────────────────────────────────────────────────── */
 function HeroMockup() {
   return (
-    <div className="relative w-full max-w-[400px]" style={{ perspective: '1100px' }}>
-      <div className="absolute inset-x-8 -bottom-4 h-16 rounded-full bg-orange-300/25 blur-2xl" />
-      <div
-        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        style={{ transform: 'rotateY(-5deg) rotateX(2deg)' }}
-      >
-        {/* Window chrome */}
-        <div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-          <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-          <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-          <div className="mx-3 flex-1 rounded bg-slate-200 px-2 py-0.5 text-center text-[9px] text-slate-400">
-            app.motoremdia.com.br
+    <div className="relative">
+      {/* Glow */}
+      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-orange-500/20 via-orange-500/5 to-transparent blur-2xl" />
+
+      {/* Dashboard card */}
+      <div className="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-24px_rgba(15,23,42,0.18)]">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-xs font-medium text-slate-500">Dashboard</div>
+            <div className="text-lg font-bold text-slate-900">Motor em Dia</div>
+          </div>
+          <div className="flex gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-slate-100" />
+            <span className="h-2.5 w-2.5 rounded-full bg-slate-100" />
+            <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
           </div>
         </div>
 
-        <div className="p-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-slate-400">Bom dia, Carlos 👋</p>
-              <p className="text-sm font-bold text-slate-900">Resumo de hoje</p>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
-              <Wrench className="h-4 w-4 text-white" />
-            </div>
-          </div>
-
-          <div className="mb-5 grid grid-cols-3 gap-2">
-            {[
-              { l: 'OS Abertas', v: '7', bg: 'bg-orange-50', t: 'text-orange-600' },
-              { l: 'Revisões', v: '4', bg: 'bg-amber-50', t: 'text-amber-600' },
-              { l: 'Mês', v: 'R$12k', bg: 'bg-emerald-50', t: 'text-emerald-600' },
-            ].map(s => (
-              <div key={s.l} className={cn('rounded-xl p-3', s.bg)}>
-                <p className="text-[9px] text-slate-400">{s.l}</p>
-                <p className={cn('mt-0.5 text-sm font-black', s.t)}>{s.v}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-            Lembretes do dia
-          </p>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { name: 'João Silva', car: 'Civic 2019', svc: 'Troca de óleo', urgent: true },
-            { name: 'Ana Lima', car: 'Gol 2021', svc: 'Revisão 30.000 km', urgent: false },
-            { name: 'Pedro Costa', car: 'Hilux 2020', svc: 'Filtro de ar', urgent: false },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3 border-b border-slate-100 py-2.5 last:border-0">
-              <div className={cn('h-2 w-2 flex-shrink-0 rounded-full', item.urgent ? 'bg-red-500' : 'bg-orange-400')} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[10px] font-semibold text-slate-800">{item.name} · {item.car}</p>
-                <p className="truncate text-[9px] text-slate-400">{item.svc}</p>
-              </div>
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-green-50">
-                <MessageSquare className="h-3 w-3 text-green-600" />
-              </div>
+            { l: 'OS abertas', v: '24', i: ClipboardList },
+            { l: 'Revisões hoje', v: '08', i: Clock },
+            { l: 'Faturamento', v: 'R$ 38k', i: TrendingUp },
+          ].map(({ l, v, i: Icon }) => (
+            <div key={l} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <Icon className="mb-2 h-4 w-4 text-orange-500" />
+              <div className="text-xs text-slate-500">{l}</div>
+              <div className="text-lg font-bold text-slate-900">{v}</div>
             </div>
           ))}
         </div>
+
+        {/* Reminders */}
+        <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-900">Lembretes de hoje</span>
+            <span className="text-xs text-slate-400">5 clientes</span>
+          </div>
+          <div className="space-y-2.5">
+            {[
+              { n: 'João Pereira', c: 'Honda Civic • Troca de óleo', k: 'ABC-1234' },
+              { n: 'Maria Santos', c: 'VW Gol • Revisão 20.000 km', k: 'DEF-5678' },
+              { n: 'Carlos Lima', c: 'Toyota Corolla • Alinhamento', k: 'GHI-9012' },
+            ].map(r => (
+              <div key={r.k} className="flex items-center justify-between rounded-lg bg-white px-3 py-2.5 shadow-sm">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900">{r.n}</div>
+                  <div className="truncate text-xs text-slate-400">{r.c}</div>
+                </div>
+                <button className="inline-flex shrink-0 items-center gap-1 rounded-md bg-orange-500/10 px-2.5 py-1 text-xs font-semibold text-orange-600">
+                  <Send className="h-3 w-3" /> Avisar
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Floating badge */}
-      <div
-        className="absolute -right-3 top-14 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-lg"
-        style={{ transform: 'rotateY(-3deg)' }}
-      >
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100">
-            <Bell className="h-3.5 w-3.5 text-orange-500" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold leading-none text-slate-900">4 alertas</p>
-            <p className="mt-0.5 text-[9px] text-slate-400">para hoje</p>
-          </div>
+      {/* WhatsApp badge */}
+      <div className="absolute -bottom-5 -left-5 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md md:flex md:items-center md:gap-3">
+        <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
+          <MessageSquare className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-xs text-slate-400">WhatsApp enviado</div>
+          <div className="text-sm font-semibold text-slate-900">+248 esta semana</div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Main ───────────────────────────────────────────────────────────────── */
+/* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function LandingPageContent({ source = 'landing' }: { source?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [showCTA, setShowCTA] = useState(false);
-
-  useEffect(() => {
-    const fn = () => {
-      setScrolled(window.scrollY > 20);
-      setShowCTA(window.scrollY > 600);
-    };
-    window.addEventListener('scroll', fn, { passive: true });
-    return () => window.removeEventListener('scroll', fn);
-  }, []);
-
-  const navLinks = [
-    ['Problema', '#problema'],
-    ['Solução', '#solucao'],
-    ['Como funciona', '#como-funciona'],
-    ['Calculadora', '#calculadora'],
-  ];
 
   return (
-    <main
-      className="w-full overflow-x-hidden bg-white text-slate-950"
-      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
-    >
+    <div className="min-h-screen bg-white text-slate-900 antialiased"
+      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <header className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-300',
-        scrolled
-          ? 'border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-xl'
-          : 'bg-white/80 backdrop-blur-sm',
-      )}>
-        <div className={cn(W, 'flex h-16 items-center justify-between')}>
-          <Link href="/landing" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 shadow-sm">
-              <Wrench className="h-4 w-4 text-white" />
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur">
+        <Container className="flex h-16 items-center justify-between">
+          <Link href="/landing" className="flex items-center gap-2">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-orange-500 text-white">
+              <Wrench className="h-4.5 w-4.5" strokeWidth={2.5} />
             </div>
-            <span className="text-[15px] font-bold tracking-tight text-slate-900">Motor em Dia</span>
+            <span className="text-lg font-bold text-slate-900">Motor em Dia</span>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map(([label, href]) => (
-              <a key={href} href={href}
-                className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">
-                {label}
-              </a>
-            ))}
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-500 md:flex">
+            <a href="#problema" className="hover:text-slate-900">Problema</a>
+            <a href="#solucao" className="hover:text-slate-900">Solução</a>
+            <a href="#beneficios" className="hover:text-slate-900">Benefícios</a>
+            <a href="#sistema" className="hover:text-slate-900">O Sistema</a>
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/login"
-              className="px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-900">
+          <div className="flex items-center gap-2">
+            <Link href="/login" className="hidden text-sm font-semibold text-slate-700 hover:text-orange-500 sm:inline">
               Entrar
             </Link>
-            <CTALink
-              href="/cadastro"
-              label="Teste grátis por 14 dias"
-              source={`${source}_nav`}
-              className="px-5 py-2.5 text-sm"
-            />
+            <PrimaryLink href="/cadastro" source={`${source}_nav`} className="px-4 py-2.5 text-xs">
+              Teste 14 dias grátis
+            </PrimaryLink>
+            <button
+              onClick={() => setMenuOpen(v => !v)}
+              className="p-2 text-slate-500 md:hidden"
+              aria-label="Menu"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
+        </Container>
 
-          <button
-            onClick={() => setMenuOpen(v => !v)}
-            className="p-2 text-slate-500 md:hidden"
-            aria-label="Menu"
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-
+        {/* Mobile menu */}
         {menuOpen && (
           <div className="border-t border-slate-200 bg-white shadow-lg md:hidden">
-            <div className={cn(W, 'py-4')}>
-              {navLinks.map(([label, href]) => (
+            <Container className="py-4">
+              {[['Problema', '#problema'], ['Solução', '#solucao'], ['Benefícios', '#beneficios'], ['O Sistema', '#sistema']].map(([label, href]) => (
                 <a key={href} href={href}
                   onClick={() => setMenuOpen(false)}
                   className="block border-b border-slate-100 py-3 text-sm font-medium text-slate-700 last:border-0">
@@ -385,404 +294,355 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
                 </a>
               ))}
               <div className="mt-4 space-y-3">
-                <Link href="/login"
-                  onClick={() => setMenuOpen(false)}
+                <Link href="/login" onClick={() => setMenuOpen(false)}
                   className="block py-3 text-center text-sm font-medium text-slate-500">
                   Entrar
                 </Link>
-                <CTALink
-                  href="/cadastro"
-                  label="Teste grátis por 14 dias"
-                  source={`${source}_mobile_menu`}
-                  className="w-full px-6 py-3.5"
-                />
+                <PrimaryLink href="/cadastro" source={`${source}_mobile_menu`} className="w-full py-3.5 px-6">
+                  Teste 14 dias grátis
+                </PrimaryLink>
               </div>
-            </div>
+            </Container>
           </div>
         )}
       </header>
 
       {/* ── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white pt-24 pb-16 md:pt-28 md:pb-20 lg:pt-32 lg:pb-24">
-        {/* Warm glow */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[65vh] opacity-50"
-          style={{ background: 'radial-gradient(ellipse 70% 60% at 50% -5%, #ffedd5, transparent)' }}
-        />
-
-        <div className={cn(W, 'relative z-10')}>
-          <div className="grid items-center gap-12 lg:grid-cols-2 xl:gap-24">
-
+      <section className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white py-12 lg:py-20">
+        <div className="pointer-events-none absolute -top-32 right-0 h-96 w-96 rounded-full bg-orange-500/10 blur-3xl" />
+        <Container>
+          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
             {/* Copy */}
-            <div className="max-w-xl">
-              <Fade>
-                <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-orange-500" />
-                  <span className="text-sm font-semibold text-orange-700">
-                    Sistema para oficinas mecânicas
-                  </span>
-                </div>
-              </Fade>
-
-              <Fade delay={70}>
-                <h1
-                  className="mb-6 font-black tracking-tight leading-[1.07] text-slate-900"
-                  style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.75rem)' }}
-                >
-                  Nunca mais perca<br />
-                  uma revisão por<br />
-                  <span className="text-orange-500">esquecimento.</span>
-                </h1>
-              </Fade>
-
-              <Fade delay={130}>
-                <p className="mb-5 text-lg font-semibold leading-relaxed text-slate-700">
-                  Transforme clientes ocasionais em clientes recorrentes com lembretes automáticos de manutenção.
-                </p>
-              </Fade>
-
-              <Fade delay={170}>
-                <p className="mb-10 text-base leading-relaxed text-slate-500">
-                  O Motor em Dia avisa quando cada cliente precisa retornar para revisão, troca de óleo ou
-                  manutenção preventiva — ajudando sua oficina a aumentar o faturamento{' '}
-                  <span className="font-medium text-slate-700">sem gastar mais com anúncios.</span>
-                </p>
-              </Fade>
-
-              <Fade delay={210}>
-                <div className="mb-10 flex flex-col gap-3 sm:flex-row">
-                  <CTALink
-                    href="/cadastro"
-                    label="Quero ver funcionando"
-                    source={`${source}_hero_primary`}
-                    className="px-7 py-4 text-[15px]"
-                  />
-                  <CTALink
-                    href="/cadastro"
-                    label="Teste grátis por 14 dias"
-                    primary={false}
-                    source={`${source}_hero_secondary`}
-                    className="px-7 py-4 text-[15px]"
-                  />
-                </div>
-              </Fade>
-
-              <Fade delay={250}>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {['14 dias grátis', 'Sem cartão de crédito', 'Cancelamento a qualquer momento'].map(t => (
-                    <span key={t} className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
-                      <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </Fade>
+            <div>
+              <SectionLabel>Sistema para oficinas mecânicas</SectionLabel>
+              <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] text-slate-900 sm:text-5xl lg:text-[3.4rem]">
+                Nunca mais perca uma{' '}
+                <span className="relative inline-block">
+                  <span className="relative z-10 text-orange-500">revisão</span>
+                  <span className="absolute inset-x-0 bottom-1 z-0 h-3 bg-orange-500/20" />
+                </span>{' '}
+                por esquecimento.
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-500">
+                Transforme cada serviço em cliente recorrente, com lembretes automáticos, histórico
+                organizado e ordens de serviço digitais.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <PrimaryLink href="/cadastro" source={`${source}_hero_primary`}>
+                  Teste grátis por 14 dias <ArrowRight className="h-4 w-4" />
+                </PrimaryLink>
+                <SecondaryLink href="/cadastro">
+                  Quero ver funcionando
+                </SecondaryLink>
+              </div>
+              <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+                {['14 dias grátis', 'Sem cartão de crédito', 'Cancelamento a qualquer momento'].map(t => (
+                  <li key={t} className="inline-flex items-center gap-2">
+                    <Check className="h-4 w-4 text-orange-500" strokeWidth={3} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* Mockup */}
-            <Fade delay={100} direction="left" className="hidden lg:flex justify-end">
+            <div className="hidden lg:block">
               <HeroMockup />
-            </Fade>
+            </div>
           </div>
-        </div>
+        </Container>
       </section>
 
-      {/* ── FEATURE STRIP ──────────────────────────────────────────────── */}
-      <section className="border-y border-slate-200 bg-white py-5 md:py-6">
-        <div className={W}>
-          <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 md:grid-cols-3 lg:grid-cols-6">
+      {/* ── FEATURE BAR ────────────────────────────────────────────────── */}
+      <section className="border-b border-slate-200 bg-white py-8">
+        <Container>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
             {[
-              { icon: Bell, label: 'Lembretes automáticos' },
-              { icon: Car, label: 'Histórico de veículos' },
-              { icon: FileText, label: 'OS digitais' },
-              { icon: MessageSquare, label: 'WhatsApp integrado' },
-              { icon: BarChart3, label: 'Dashboard gerencial' },
-              { icon: DollarSign, label: 'Controle financeiro' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 font-medium">
-                <Icon className="h-4 w-4 flex-shrink-0 text-orange-500" />
-                {label}
+              { i: Bell, t: 'Lembretes automáticos' },
+              { i: History, t: 'Histórico de veículos' },
+              { i: FileText, t: 'OS digitais' },
+              { i: MessageSquare, t: 'WhatsApp integrado' },
+              { i: LayoutDashboard, t: 'Dashboard gerencial' },
+              { i: DollarSign, t: 'Controle financeiro' },
+            ].map(({ i: Icon, t }) => (
+              <div key={t} className="flex items-center gap-2.5 text-sm font-medium text-slate-500">
+                <Icon className="h-5 w-5 shrink-0 text-orange-500" />
+                <span>{t}</span>
               </div>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* ── O PROBLEMA ─────────────────────────────────────────────────── */}
-      <section id="problema" className="bg-slate-50 py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="O problema"
-            title="Quantos clientes sua oficina já perdeu por esquecimento?"
-            subtitle="Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa."
-          />
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
+      <section id="problema" className="bg-slate-50 py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>O problema</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Quantos clientes sua oficina já perdeu por esquecimento?
+            </h2>
+            <p className="mt-4 text-lg text-slate-500">
+              Esses problemas custam dinheiro — e a maioria dos donos de oficina não percebe porque a perda é silenciosa.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Clock, title: 'Revisões esquecidas', desc: 'O cliente promete "passar semana que vem" e nunca mais volta. Sem um lembrete, ele simplesmente esquece.' },
-              { icon: RotateCcw, title: 'Trocas de óleo perdidas', desc: 'A troca de óleo é o serviço mais recorrente. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
-              { icon: Car, title: 'Falta de acompanhamento', desc: 'Sem acompanhar o histórico do veículo, sua oficina perde oportunidades de oferecer serviços preventivos no momento certo.' },
-              { icon: Users, title: 'Clientes que nunca retornam', desc: 'Conquistar um novo cliente custa de 5 a 7 vezes mais do que manter um. Você está perdendo dinheiro na retenção.' },
-              { icon: FileText, title: 'Histórico desorganizado', desc: 'Informações em papel, caderno ou memória do mecânico. Quando alguém sai, o histórico vai junto.' },
-              { icon: MessageSquare, title: 'WhatsApp virou bagunça', desc: 'Clientes, fornecedores, família — tudo misturado. Impossível acompanhar quem precisa de atenção hoje.' },
-            ].map((item, i) => (
-              <Fade key={i} delay={i * 55}>
-                <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-orange-200 hover:shadow-md">
-                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-red-100 bg-red-50">
-                    <item.icon className="h-5 w-5 text-red-500" />
-                  </div>
-                  <h3 className="mb-2 text-base font-bold text-slate-900">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-slate-500">{item.desc}</p>
-                </div>
-              </Fade>
+              { i: Clock, t: 'Revisões esquecidas', d: 'O cliente promete "passar semana que vem" e nunca mais volta. Sem um lembrete, ele simplesmente esquece.' },
+              { i: Droplets, t: 'Trocas de óleo perdidas', d: 'A troca de óleo é o serviço mais recorrente. Cada troca esquecida é dinheiro direto na mesa do concorrente.' },
+              { i: AlertTriangle, t: 'Falta de acompanhamento', d: 'Sem acompanhar o histórico do veículo, sua oficina perde oportunidades de oferecer serviços preventivos no momento certo.' },
+              { i: UserMinus, t: 'Clientes que nunca retornam', d: 'Conquistar um novo cliente custa de 5 a 7 vezes mais do que manter um. Você está perdendo dinheiro na retenção.' },
+              { i: FolderOpen, t: 'Histórico desorganizado', d: 'Informações em papel, caderno ou memória do mecânico. Quando alguém sai, o histórico vai junto.' },
+              { i: MessageSquare, t: 'WhatsApp virou bagunça', d: 'Clientes, fornecedores, família — tudo misturado. Impossível acompanhar quem precisa retornar e quando.' },
+            ].map(({ i: Icon, t, d }) => (
+              <Card key={t}>
+                <IconBadge tone="ink"><Icon className="h-5 w-5" /></IconBadge>
+                <h3 className="text-lg font-bold text-slate-900">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{d}</p>
+              </Card>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* ── A SOLUÇÃO ──────────────────────────────────────────────────── */}
-      <section id="solucao" className="bg-white py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="A solução"
-            title="Seu sistema de acompanhamento automático"
-            subtitle="Um fluxo simples que transforma cada serviço realizado em uma oportunidade de retorno garantido."
-            align="center"
-          />
-
-          <div className="mx-auto max-w-lg space-y-0">
+      <section id="solucao" className="bg-white py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>A solução</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Seu sistema de acompanhamento automático
+            </h2>
+            <p className="mt-4 text-lg text-slate-500">
+              Um fluxo simples que transforma cada serviço realizado em uma oportunidade de retorno garantido.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: Car, title: 'Cadastro do veículo', desc: 'Cliente, carro e quilometragem registrados em 2 minutos. Histórico centralizado para sempre.' },
-              { icon: FileText, title: 'Registro da manutenção', desc: 'OS criada, serviços e próximo prazo de retorno definidos com precisão.' },
-              { icon: Zap, title: 'Monitoramento automático', desc: 'O sistema acompanha todos os prazos em segundo plano, sem que você precise fazer nada.' },
-              { icon: Bell, title: 'Alerta de retorno', desc: 'Você recebe o aviso e envia mensagem pelo WhatsApp com um clique.' },
-              { icon: TrendingUp, title: 'Cliente volta para sua oficina', desc: 'Relacionamento fortalecido. Faturamento crescendo todo mês.' },
-            ].map((step, i) => (
-              <Fade key={i} delay={i * 80}>
-                <div className="flex items-stretch gap-5 md:gap-6">
-                  <div className="flex w-12 flex-shrink-0 flex-col items-center">
-                    <div className={cn(
-                      'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl',
-                      i === 4
-                        ? 'bg-orange-500 shadow-md shadow-orange-200'
-                        : 'border-2 border-orange-200 bg-white',
-                    )}>
-                      <step.icon className={cn('h-5 w-5', i === 4 ? 'text-white' : 'text-orange-500')} />
-                    </div>
-                    {i < 4 && (
-                      <div
-                        className="my-1 w-px flex-1 bg-gradient-to-b from-orange-200 to-orange-50"
-                        style={{ minHeight: '48px' }}
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 pb-10 pt-2 last:pb-0">
-                    <h3 className="mb-2 text-base font-bold text-slate-900">{step.title}</h3>
-                    <p className="text-sm leading-relaxed text-slate-500">{step.desc}</p>
-                  </div>
-                </div>
-              </Fade>
+              { i: Car, t: 'Cadastro do veículo', d: 'Cliente, carro e quilometragem registrados em 2 minutos. Histórico centralizado para sempre.' },
+              { i: ClipboardList, t: 'Registro da manutenção', d: 'OS criada, serviços e próximo prazo de retorno definidos com precisão.' },
+              { i: Bell, t: 'Lembrete automático', d: 'O sistema avisa quando o cliente precisa voltar — por data, quilometragem ou tipo de serviço.' },
+              { i: TrendingUp, t: 'Retorno e fidelização', d: 'Sua oficina chama o cliente na hora certa e aumenta o faturamento sem depender de novos anúncios.' },
+            ].map(({ i: Icon, t, d }, idx) => (
+              <Card key={t} className="relative">
+                <span className="absolute right-5 top-5 text-3xl font-extrabold text-orange-500/15">
+                  0{idx + 1}
+                </span>
+                <IconBadge><Icon className="h-5 w-5" /></IconBadge>
+                <h3 className="text-lg font-bold text-slate-900">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{d}</p>
+              </Card>
             ))}
           </div>
-
-          <Fade className="mt-12 flex justify-center md:mt-16">
-            <CTALink
-              href="/cadastro"
-              label="Quero ver isso funcionando"
-              source={`${source}_solucao_cta`}
-              className="px-8 py-4 text-[15px]"
-            />
-          </Fade>
-        </div>
+        </Container>
       </section>
 
       {/* ── BENEFÍCIOS ─────────────────────────────────────────────────── */}
-      <section id="beneficios" className="bg-slate-50 py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="Benefícios"
-            title="O que muda na sua oficina a partir do primeiro mês"
-          />
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
+      <section id="beneficios" className="bg-slate-50 py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>Benefícios</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              O que muda na sua oficina a partir do primeiro mês
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: TrendingUp, title: 'Mais clientes retornando', desc: 'Clientes avisados no momento certo voltam mais. Não tem segredo: comunicação = fidelização.' },
-              { icon: DollarSign, title: 'Faturamento recorrente', desc: 'Cada cliente fidelizado gera receita previsível todo mês, sem depender de novos anúncios.' },
-              { icon: Bell, title: 'Menos esquecimentos', desc: 'O sistema lembra por você. Nenhum cliente cai no esquecimento por falta de atenção.' },
-              { icon: Star, title: 'Atendimento profissional', desc: 'Histórico completo, OS digital e comunicação organizada. Seu cliente percebe a diferença.' },
-              { icon: FileText, title: 'Histórico organizado', desc: 'Cada carro, cada serviço, cada troca — na nuvem, acessível de qualquer lugar, para sempre.' },
-              { icon: BarChart3, title: 'Gestão mais eficiente', desc: 'Dashboard completo: OS abertas, revisões próximas e faturamento do mês em uma tela só.' },
-            ].map((item, i) => (
-              <Fade key={i} delay={i * 55}>
-                <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-orange-200 hover:shadow-md">
-                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-orange-100 bg-orange-50">
-                    <item.icon className="h-5 w-5 text-orange-500" />
-                  </div>
-                  <h3 className="mb-2 text-base font-bold text-slate-900">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-slate-500">{item.desc}</p>
-                </div>
-              </Fade>
+              { i: Users, t: 'Mais clientes retornando', d: 'Clientes avisados no momento certo voltam mais. Não tem segredo: comunicação = fidelização.' },
+              { i: TrendingUp, t: 'Faturamento recorrente', d: 'Cada cliente fidelizado gera receita previsível todo mês, sem depender de novos anúncios.' },
+              { i: Bell, t: 'Menos esquecimentos', d: 'O sistema lembra por você. Nenhum cliente cai no esquecimento por falta de atenção.' },
+              { i: Sparkles, t: 'Atendimento profissional', d: 'Histórico completo, OS digital e comunicação organizada. Seu cliente percebe a diferença.' },
+              { i: History, t: 'Histórico organizado', d: 'Cada carro, cada serviço, cada troca — na nuvem, acessível de qualquer lugar, para sempre.' },
+              { i: LayoutDashboard, t: 'Gestão mais eficiente', d: 'Dashboard completo: OS abertas, revisões próximas e faturamento do mês em uma tela só.' },
+            ].map(({ i: Icon, t, d }) => (
+              <Card key={t}>
+                <IconBadge><Icon className="h-5 w-5" /></IconBadge>
+                <h3 className="text-lg font-bold text-slate-900">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{d}</p>
+              </Card>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* ── CALCULADORA ────────────────────────────────────────────────── */}
-      <section id="calculadora" className="bg-white py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="Calculadora"
-            title="Calcule quanto faturamento você está perdendo agora"
-            subtitle="Ajuste os valores e veja a projeção de faturamento que pode ser recuperado com lembretes automáticos."
-            align="center"
-          />
-          <div className="mx-auto max-w-4xl">
-            <Fade delay={100}>
-              <Calculator />
-            </Fade>
+      <section id="calculadora" className="bg-white py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>Calculadora</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Calcule quanto faturamento você está perdendo agora
+            </h2>
+            <p className="mt-4 text-lg text-slate-500">
+              Ajuste os valores e veja a projeção de faturamento que pode ser recuperado com lembretes automáticos.
+            </p>
           </div>
-        </div>
+          <CalculatorBlock source={source} />
+        </Container>
       </section>
 
       {/* ── O SISTEMA ──────────────────────────────────────────────────── */}
-      <section id="como-funciona" className="bg-slate-50 py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="O sistema"
-            title="Tudo que sua oficina precisa, em uma tela só"
-            subtitle="Interface projetada para oficinas mecânicas. Simples, rápida e completa."
-            align="center"
-          />
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
+      <section id="sistema" className="bg-slate-50 py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>O sistema</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Tudo o que sua oficina precisa em um só lugar
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: BarChart3, label: 'Dashboard', desc: 'Visão completa do negócio: OS abertas, faturamento e alertas em tempo real.' },
-              { icon: Car, label: 'Veículos', desc: 'Histórico completo de cada carro atendido. Marca, modelo, placa, quilometragem.' },
-              { icon: FileText, label: 'Ordens de Serviço', desc: 'OS digital com PDF profissional. Criada em minutos, enviada na hora.' },
-              { icon: Bell, label: 'Alertas de revisão', desc: 'Lembretes automáticos por data e quilometragem. Zero esquecimento.' },
-              { icon: DollarSign, label: 'Financeiro', desc: 'Entradas, saídas e lucratividade por serviço. Saldo em tempo real.' },
-              { icon: BarChart3, label: 'Relatórios', desc: 'Serviços mais rentáveis, clientes frequentes, performance por período.' },
-            ].map((item, i) => (
-              <Fade key={i} delay={i * 55}>
-                <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-orange-200 hover:shadow-md">
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500 shadow-sm shadow-orange-200 transition-transform duration-300 group-hover:scale-105">
-                    <item.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-bold text-slate-900">{item.label}</h3>
-                  <p className="text-sm leading-relaxed text-slate-500">{item.desc}</p>
+              { i: Users, t: 'Clientes e veículos', d: 'Cadastro completo e centralizado.' },
+              { i: FileText, t: 'Ordens de serviço digitais', d: 'OS criadas e assinadas em segundos.' },
+              { i: Bell, t: 'Revisões futuras', d: 'Agenda inteligente de retornos.' },
+              { i: History, t: 'Histórico completo', d: 'Todo serviço de cada veículo, sempre.' },
+              { i: DollarSign, t: 'Controle financeiro', d: 'Receitas, despesas e faturamento em ordem.' },
+              { i: LayoutDashboard, t: 'Dashboard gerencial', d: 'A oficina inteira em uma tela só.' },
+            ].map(({ i: Icon, t, d }) => (
+              <Card key={t} className="flex items-start gap-4">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-orange-500/10 text-orange-500">
+                  <Icon className="h-5 w-5" />
                 </div>
-              </Fade>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-slate-900">{t}</h3>
+                  <p className="mt-1 text-sm text-slate-500">{d}</p>
+                </div>
+              </Card>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* ── SEGURANÇA ──────────────────────────────────────────────────── */}
-      <section id="seguranca" className="bg-white py-20 md:py-24 lg:py-28">
-        <div className={W}>
-          <SectionHeader
-            label="Segurança"
-            title="Seguro, confiável e pronto para usar"
-            subtitle="Sem instalação. Sem complicação. Começa a funcionar no primeiro dia."
-            align="center"
-          />
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5 md:gap-6">
+      <section id="seguranca" className="bg-white py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>Segurança</SectionLabel>
+            <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Seguro, confiável e pronto para usar
+            </h2>
+            <p className="mt-4 text-lg text-slate-500">
+              Sem instalação. Sem complicação. Começa a funcionar no primeiro dia.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              { icon: Cloud, title: '100% online', desc: 'Sem instalar nada' },
-              { icon: Smartphone, title: 'Celular e computador', desc: 'Qualquer dispositivo' },
-              { icon: Shield, title: 'Dados protegidos', desc: 'Criptografia total' },
-              { icon: RotateCcw, title: 'Backup automático', desc: 'Nuvem em tempo real' },
-              { icon: Zap, title: 'Interface simples', desc: 'Pronto no primeiro dia' },
-            ].map((item, i) => (
-              <Fade key={i} delay={i * 55}>
-                <div className="flex h-full flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors hover:border-orange-200">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-orange-100 bg-orange-50">
-                    <item.icon className="h-5 w-5 text-orange-500" />
-                  </div>
-                  <h3 className="mb-1.5 text-sm font-bold text-slate-900">{item.title}</h3>
-                  <p className="text-xs leading-relaxed text-slate-400">{item.desc}</p>
+              { i: Cloud, t: '100% online', d: 'Sem instalar nada' },
+              { i: Smartphone, t: 'Celular e computador', d: 'Qualquer dispositivo' },
+              { i: ShieldCheck, t: 'Dados protegidos', d: 'Criptografia total' },
+              { i: History, t: 'Backup automático', d: 'Nuvem em tempo real' },
+              { i: Sparkles, t: 'Interface simples', d: 'Pronto no primeiro dia' },
+            ].map(({ i: Icon, t, d }) => (
+              <Card key={t} className="text-center">
+                <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-orange-500/10 text-orange-500">
+                  <Icon className="h-5 w-5" />
                 </div>
-              </Fade>
+                <h3 className="text-base font-bold text-slate-900">{t}</h3>
+                <p className="mt-1 text-sm text-slate-500">{d}</p>
+              </Card>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* ── CTA FINAL ──────────────────────────────────────────────────── */}
-      <section className="bg-slate-950 py-20 text-white md:py-28 lg:py-32">
-        <div className={cn(W, 'text-center')}>
-          <Fade>
-            <div className="mx-auto max-w-3xl">
-              <div className="mx-auto mb-10 h-1 w-14 rounded-full bg-orange-500 md:mb-14" />
-              <h2
-                className="mb-6 font-black leading-tight text-white"
-                style={{ fontSize: 'clamp(1.9rem, 3.8vw, 3.25rem)' }}
-              >
-                Pare de perder clientes<br />
-                para o esquecimento.
+      <section className="bg-slate-50 py-16 lg:py-20">
+        <Container>
+          <div className="relative overflow-hidden rounded-3xl bg-slate-900 px-7 py-14 text-center text-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.4)] sm:px-12 lg:py-20">
+            {/* Glows */}
+            <div className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full bg-orange-500/30 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -right-10 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" />
+
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
+                Pare de perder clientes para o esquecimento.
               </h2>
-              <p className="mx-auto mb-12 max-w-xl text-lg leading-relaxed text-slate-400">
-                Comece hoje a transformar{' '}
-                <span className="font-semibold text-slate-200">manutenção em relacionamento</span>{' '}
-                e relacionamento em{' '}
-                <span className="font-semibold text-slate-200">faturamento.</span>
+              <p className="mt-5 text-lg text-white/75">
+                Comece hoje a transformar manutenção em relacionamento e relacionamento em faturamento.
               </p>
-              <CTALink
-                href="/cadastro"
-                label="Quero testar grátis"
-                source={`${source}_cta_final`}
-                className="px-12 py-4 text-base"
-              />
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {['14 dias grátis', 'Sem cartão', 'Cancele quando quiser', 'Suporte em português'].map(t => (
-                  <span key={t} className="flex items-center gap-1.5 text-sm font-medium text-slate-400">
-                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                    {t}
-                  </span>
-                ))}
+              <div className="mt-8 flex justify-center">
+                <PrimaryLink href="/cadastro" source={`${source}_cta_final`} className="px-8 py-4 text-base">
+                  Quero testar grátis <ArrowRight className="h-4 w-4" />
+                </PrimaryLink>
               </div>
+              <ul className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70">
+                {['14 dias grátis', 'Sem cartão', 'Cancele quando quiser', 'Suporte em português'].map(t => (
+                  <li key={t} className="inline-flex items-center gap-2">
+                    <Check className="h-4 w-4 text-orange-500" strokeWidth={3} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </Fade>
-        </div>
+          </div>
+        </Container>
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white py-8">
-        <div className={cn(W, 'flex flex-col items-center justify-between gap-6 md:flex-row')}>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
-              <Wrench className="h-4 w-4 text-white" />
+        <Container className="flex flex-col items-center justify-between gap-5 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-orange-500 text-white">
+              <Wrench className="h-4 w-4" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-slate-900">Motor em Dia</span>
+            <span className="text-sm text-slate-400">© 2026 Motor em Dia. Todos os direitos reservados.</span>
           </div>
-          <p className="text-sm text-slate-400">
-            © 2025 Motor em Dia. Todos os direitos reservados.
-          </p>
-          <div className="flex items-center gap-6 text-sm text-slate-500">
-            <Link href="/login" className="transition-colors hover:text-slate-800">
-              Entrar
-            </Link>
-            <Link
-              href="/cadastro"
-              className="font-medium text-orange-600 transition-colors hover:text-slate-800"
-            >
-              Criar conta grátis
-            </Link>
+          <div className="flex items-center gap-6 text-sm font-medium text-slate-700">
+            <Link href="/login" className="hover:text-orange-500">Entrar</Link>
+            <Link href="/cadastro" className="hover:text-orange-500">Criar conta grátis</Link>
           </div>
-        </div>
+        </Container>
       </footer>
+    </div>
+  );
+}
 
-      {/* ── CTA FLUTUANTE MOBILE ───────────────────────────────────────── */}
-      <div className={cn(
-        'fixed inset-x-0 bottom-0 z-40 transition-all duration-300 md:hidden',
-        showCTA ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
-      )}>
-        <div className="border-t border-slate-200 bg-white px-5 py-4 shadow-2xl">
-          <CTALink
+/* ─── Calculator (extracted to avoid hook-in-loop) ──────────────────────── */
+function CalculatorBlock({ source }: { source: string }) {
+  const [clients, setClients] = useState(120);
+  const [ticket, setTicket] = useState(450);
+  const [pct, setPct] = useState(40);
+
+  const lost = useMemo(() => Math.round((clients * ticket * pct) / 100), [clients, ticket, pct]);
+  const yearly = lost * 12;
+
+  const fmt = (n: number) =>
+    n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+  return (
+    <div className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+      <Card className="p-7">
+        <div className="space-y-7">
+          <Field label="Clientes por mês" value={clients} suffix="clientes" min={10} max={500} step={10} onChange={setClients} />
+          <Field label="Ticket médio" value={ticket} prefix="R$" min={50} max={2000} step={50} onChange={setTicket} />
+          <Field label="% de clientes que não retornam" value={pct} suffix="%" min={5} max={90} step={5} onChange={setPct} />
+        </div>
+      </Card>
+
+      <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-7 text-white shadow-[0_24px_60px_-24px_rgba(15,23,42,0.3)]">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-500/30 blur-3xl" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+            <PieChart className="h-3.5 w-3.5" /> Estimativa
+          </span>
+          <p className="mt-5 text-sm text-white/70">Faturamento perdido por mês</p>
+          <p className="mt-2 text-5xl font-extrabold text-orange-400">{fmt(lost)}</p>
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm text-white/70">Em 12 meses</p>
+            <p className="mt-1 text-2xl font-bold">{fmt(yearly)}</p>
+          </div>
+          <p className="mt-5 text-sm leading-relaxed text-white/70">
+            Com lembretes automáticos, boa parte desse valor volta a entrar no caixa todo mês.
+          </p>
+          <PrimaryLink
             href="/cadastro"
-            label="Quero ver funcionando"
-            source={`${source}_floating_mobile`}
-            className="w-full px-6 py-4 text-base"
-          />
+            source={`${source}_calculator`}
+            className="mt-6 w-full"
+          >
+            Quero recuperar esse faturamento
+          </PrimaryLink>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
