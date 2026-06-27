@@ -403,16 +403,11 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </header>
 
       {/* ── HERO ───────────────────────────────────────────────────────── */}
-      <section className="relative flex min-h-screen items-center overflow-hidden pt-28 pb-24 md:pt-36 md:pb-32 lg:pt-40 lg:pb-36">
+      <section className="relative overflow-hidden bg-white pt-24 pb-16 md:pt-28 md:pb-20 lg:pt-32 lg:pb-24">
         {/* Warm glow */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-[65vh] opacity-50"
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% -5%, #ffedd5, transparent)' }}
-        />
-        {/* Bottom fade */}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-24"
-          style={{ background: 'linear-gradient(to bottom, transparent, rgba(248,250,252,0.6))' }}
         />
 
         <div className={cn(W, 'relative z-10')}>
@@ -493,7 +488,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── FEATURE STRIP ──────────────────────────────────────────────── */}
-      <section className="border-y border-slate-200 bg-white py-6">
+      <section className="border-y border-slate-200 bg-white py-5 md:py-6">
         <div className={W}>
           <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 md:grid-cols-3 lg:grid-cols-6">
             {[
@@ -514,7 +509,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── O PROBLEMA ─────────────────────────────────────────────────── */}
-      <section id="problema" className="bg-slate-50 py-20 md:py-28 lg:py-32">
+      <section id="problema" className="bg-slate-50 py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="O problema"
@@ -545,7 +540,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── A SOLUÇÃO ──────────────────────────────────────────────────── */}
-      <section id="solucao" className="bg-white py-20 md:py-28 lg:py-32">
+      <section id="solucao" className="bg-white py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="A solução"
@@ -601,7 +596,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── BENEFÍCIOS ─────────────────────────────────────────────────── */}
-      <section id="beneficios" className="bg-slate-50 py-20 md:py-28 lg:py-32">
+      <section id="beneficios" className="bg-slate-50 py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="Benefícios"
@@ -631,7 +626,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── CALCULADORA ────────────────────────────────────────────────── */}
-      <section id="calculadora" className="bg-white py-20 md:py-28 lg:py-32">
+      <section id="calculadora" className="bg-white py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="Calculadora"
@@ -648,7 +643,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── O SISTEMA ──────────────────────────────────────────────────── */}
-      <section id="como-funciona" className="bg-slate-50 py-20 md:py-28 lg:py-32">
+      <section id="como-funciona" className="bg-slate-50 py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="O sistema"
@@ -680,7 +675,7 @@ export default function LandingPageContent({ source = 'landing' }: { source?: st
       </section>
 
       {/* ── SEGURANÇA ──────────────────────────────────────────────────── */}
-      <section id="seguranca" className="bg-white py-20 md:py-28 lg:py-32">
+      <section id="seguranca" className="bg-white py-20 md:py-24 lg:py-28">
         <div className={W}>
           <SectionHeader
             label="Segurança"
