@@ -185,7 +185,8 @@ function RelatoriosTab() {
   const ordensNoPeriodo = useMemo(() => {
     const from = new Date(dataInicio + 'T00:00:00');
     const to   = new Date(dataFim   + 'T23:59:59');
-    return ordens.filter(o => { const d = new Date(o.dataEntrada); return d >= from && d <= to; });
+    // Usa data de fechamento (dataConclusao) — se não houver, usa dataEntrada como fallback
+    return ordens.filter(o => { const d = new Date((o.dataConclusao || o.dataEntrada) + 'T12:00'); return d >= from && d <= to; });
   }, [ordens, dataInicio, dataFim]);
 
   const ordensFiltradas = useMemo(() =>
@@ -205,7 +206,7 @@ function RelatoriosTab() {
       const pct = parseFloat((o.valorMaoDeObra * percentagem / 100).toFixed(2));
       return {
         'OS': o.numero,
-        'Data': o.dataEntrada,
+        'Data': o.dataConclusao || o.dataEntrada, // data de fechamento
         'Cliente': c?.nome || '',
         'Veículo': v ? `${v.marca} ${v.modelo} ${v.placa}` : '',
         'Mecânico': o.mecanico || '',
@@ -245,7 +246,9 @@ function RelatoriosTab() {
       const v = veiculos.find(x => x.id === o.veiculoId);
       const pct = (o.valorMaoDeObra * percentagem / 100).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
       const mo  = o.valorMaoDeObra.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-      return `<tr><td>${o.numero}</td><td>${new Date(o.dataEntrada+'T12:00').toLocaleDateString('pt-BR')}</td><td>${c?.nome||'—'}</td><td>${v?`${v.marca} ${v.modelo} - ${v.placa}`:'—'}</td><td>${o.mecanico||'—'}</td><td>${mo}</td><td><strong>${pct}</strong></td></tr>`;
+      // Usa data de fechamento da OS no relatório
+      const dataOS = o.dataConclusao || o.dataEntrada;
+      return `<tr><td>${o.numero}</td><td>${new Date(dataOS+'T12:00').toLocaleDateString('pt-BR')}</td><td>${c?.nome||'—'}</td><td>${v?`${v.marca} ${v.modelo} - ${v.placa}`:'—'}</td><td>${o.mecanico||'—'}</td><td>${mo}</td><td><strong>${pct}</strong></td></tr>`;
     }).join('');
     const moFmt  = totalMO.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
     const pagFmt = valorPagar.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
@@ -362,7 +365,7 @@ function RelatoriosTab() {
                     )}
                   </div>
                   <span className="hidden sm:block sm:col-span-2 text-xs text-[rgb(var(--muted-foreground))]">
-                    {new Date(o.dataEntrada+'T12:00').toLocaleDateString('pt-BR')}
+                    {new Date((o.dataConclusao || o.dataEntrada)+'T12:00').toLocaleDateString('pt-BR')}
                   </span>
                   <div className="flex-1 sm:col-span-3 min-w-0">
                     <p className="text-sm font-medium text-[rgb(var(--foreground))] truncate">{c?.nome || '—'}</p>
@@ -643,7 +646,8 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
                         valor: o.valorTotal,
                         ordemServicoId: o.id,
                         clienteId: o.clienteId,
-                        data: today,
+                        // Usa a data de fechamento da OS como data do lançamento
+                        data: (o as any).dataConclusao || today,
                         pago: true,
                       });
                       toast.success('Pagamento registrado! Lançamento criado.');
