@@ -24,15 +24,19 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(dateStr));
+  // Strings de data pura (YYYY-MM-DD) são interpretadas como meia-noite UTC pelo JS.
+  // Em BRT (UTC-3) isso vira o dia anterior às 21h. Forçamos meio-dia local para corrigir.
+  const safe = dateStr.includes('T') ? dateStr : dateStr.substring(0, 10) + 'T12:00:00';
+  return new Intl.DateTimeFormat('pt-BR').format(new Date(safe));
 }
 
 export function formatDateLong(dateStr: string): string {
+  const safe = dateStr.includes('T') ? dateStr : dateStr.substring(0, 10) + 'T12:00:00';
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
-  }).format(new Date(dateStr));
+  }).format(new Date(safe));
 }
 
 export function formatPhone(phone: string): string {
