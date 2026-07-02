@@ -8,8 +8,9 @@ import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Plus, Trash2,
   Lock, Eye, EyeOff, ArrowRight, ShieldCheck, LogOut, Pencil, CheckCircle2,
   X, Save, Clock, History, BarChart2, FileSpreadsheet, Download, SlidersHorizontal,
-  Filter, Users,
+  Filter, Users, Calendar, ClipboardList,
 } from 'lucide-react';
+import { RelatoriosGeraisTab } from '@/components/relatorios-gerais-tab';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -397,7 +398,7 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
   } = useStore();
 
   // Tab state
-  const [tab, setTab] = useState<'financeiro' | 'relatorios'>('financeiro');
+  const [tab, setTab] = useState<'financeiro' | 'relatorios' | 'gerais'>('financeiro');
 
   // Lançamentos state
   const [showLancModal, setShowLancModal] = useState(false);
@@ -416,20 +417,23 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
 
   const today = localDateStr();
   const currentMonth = today.slice(0, 7);
+  const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+
+  // Filtro de período para os cards de estatísticas
+  const [periodoInicio, setPeriodoInicio] = useState(today);
+  const [periodoFim,    setPeriodoFim]    = useState(today);
 
   const stats = useMemo(() => {
-    const todayEntradas = lancamentos.filter(l => l.data.startsWith(today) && l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0);
-    const todaySaidas = lancamentos.filter(l => l.data.startsWith(today) && l.tipo === 'saida').reduce((s, l) => s + l.valor, 0);
-    const mesEntradas = lancamentos.filter(l => l.data.startsWith(currentMonth) && l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0);
-    const mesSaidas = lancamentos.filter(l => l.data.startsWith(currentMonth) && l.tipo === 'saida').reduce((s, l) => s + l.valor, 0);
-    const lucroMes = mesEntradas - mesSaidas;
-    const contasReceber = ordens
+    const periodoEntradas = lancamentos.filter(l => l.data >= periodoInicio && l.data <= periodoFim && l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0);
+    const periodoSaidas   = lancamentos.filter(l => l.data >= periodoInicio && l.data <= periodoFim && l.tipo === 'saida').reduce((s, l) => s + l.valor, 0);
+    const mesEntradas     = lancamentos.filter(l => l.data.startsWith(currentMonth) && l.tipo === 'entrada').reduce((s, l) => s + l.valor, 0);
+    const contasReceber   = ordens
       .filter(o => o.status === 'finalizada' || o.status === 'em_andamento')
       .filter(o => !lancamentos.some(l => l.ordemServicoId === o.id))
       .map(o => ({ ...o, cliente: clientes.find(c => c.id === o.clienteId) }));
     const totalContasPagar = contasPagar.filter(c => !c.pago).reduce((s, c) => s + c.valor, 0);
-    return { todayEntradas, todaySaidas, mesEntradas, mesSaidas, lucroMes, contasReceber, totalContasPagar };
-  }, [lancamentos, ordens, clientes, today, currentMonth, contasPagar]);
+    return { periodoEntradas, periodoSaidas, mesEntradas, contasReceber, totalContasPagar };
+  }, [lancamentos, ordens, clientes, periodoInicio, periodoFim, currentMonth, contasPagar]);
 
   const chartData = useMemo(() =>
     Array.from({ length: 14 }, (_, i) => {
@@ -485,34 +489,66 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
       {/* Tab selector */}
       <div className="flex gap-1 p-1 bg-[rgb(var(--muted))] rounded-xl">
         {([
-          { key: 'financeiro' as const,  label: 'Financeiro',     icon: DollarSign },
-          { key: 'relatorios' as const,  label: 'Rel. Mecânicos', icon: BarChart2   },
+          { key: 'financeiro' as const, label: 'Financeiro',     icon: DollarSign    },
+          { key: 'relatorios' as const, label: 'Rel. Mecânicos', icon: BarChart2      },
+          { key: 'gerais'     as const, label: 'Rel. Gerais',    icon: ClipboardList  },
         ]).map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200',
               tab === key
-                ? key === 'relatorios'
-                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30'
-                  : 'bg-[rgb(var(--card))] text-[rgb(var(--foreground))] shadow-sm'
+                ? key === 'gerais'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30'
+                  : key === 'relatorios'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30'
+                    : 'bg-[rgb(var(--card))] text-[rgb(var(--foreground))] shadow-sm'
                 : 'text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]'
             )}>
             <Icon className="w-4 h-4" />
-            <span>{label}</span>
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
 
       {tab === 'relatorios' && <RelatoriosTab />}
+      {tab === 'gerais'     && <RelatoriosGeraisTab />}
       {tab === 'financeiro' && (
         <div className="space-y-5">
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+      {/* Filtro de período para os cards */}
+      <div className={cn('rounded-2xl p-4 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-4 h-4 text-orange-500" />
+          <span className="text-sm font-semibold text-[rgb(var(--foreground))]">Período dos Cards</span>
+        </div>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">De</label>
+            <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className={inputCn} />
+          </div>
+          <div>
+            <label className="block text-xs text-[rgb(var(--muted-foreground))] mb-1">Até</label>
+            <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className={inputCn} />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { l: 'Hoje',  f: () => { setPeriodoInicio(today); setPeriodoFim(today); } },
+              { l: '7d',    f: () => { const t = new Date(); t.setDate(t.getDate()-6); const y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0'); setPeriodoInicio(`${y}-${m}-${d}`); setPeriodoFim(today); } },
+              { l: 'Mês',   f: () => { setPeriodoInicio(firstOfMonth); setPeriodoFim(today); } },
+              { l: 'Trim.', f: () => { const t = new Date(); t.setMonth(t.getMonth()-3); const y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0'); setPeriodoInicio(`${y}-${m}-${d}`); setPeriodoFim(today); } },
+            ].map(({ l, f }) => (
+              <button key={l} onClick={f} className="px-3 py-1.5 rounded-lg text-xs border border-[rgb(var(--card-border))] text-[rgb(var(--muted-foreground))] hover:border-orange-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all">{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats — 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Entradas Hoje',   value: stats.todayEntradas, icon: TrendingUp,   color: 'text-emerald-500 bg-emerald-500/10' },
-          { label: 'Saídas Hoje',     value: stats.todaySaidas,   icon: TrendingDown,  color: 'text-red-500 bg-red-500/10' },
-          { label: 'Faturado no Mês', value: stats.mesEntradas,   icon: DollarSign,    color: 'text-orange-500 bg-orange-500/10' },
-          { label: 'Lucro no Mês',    value: stats.lucroMes,      icon: TrendingUp,    color: stats.lucroMes >= 0 ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10' },
+          { label: 'Entradas no Período', value: stats.periodoEntradas, icon: TrendingUp,  color: 'text-emerald-500 bg-emerald-500/10' },
+          { label: 'Saídas no Período',   value: stats.periodoSaidas,   icon: TrendingDown, color: 'text-red-500 bg-red-500/10' },
+          { label: 'Faturado no Mês',     value: stats.mesEntradas,     icon: DollarSign,   color: 'text-orange-500 bg-orange-500/10' },
         ].map((s) => (
           <div key={s.label} className={cn('rounded-2xl p-4 border', 'bg-[rgb(var(--card))] border-[rgb(var(--card-border))]')}>
             <div className={cn('p-2 rounded-lg w-fit mb-2', s.color)}>
