@@ -5,6 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Retorna a data LOCAL no formato YYYY-MM-DD.
+ * Evita o bug de new Date().toISOString().split('T')[0] que retorna data UTC
+ * e adianta 1 dia em fusos UTC-3 após as 21h.
+ */
+export function localDateStr(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',

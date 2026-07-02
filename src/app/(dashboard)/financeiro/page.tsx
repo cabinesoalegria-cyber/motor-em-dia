@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/lib/store';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, cn, localDateStr } from '@/lib/utils';
 import { ContaPagar, Lancamento } from '@/lib/types';
 import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Plus, Trash2,
@@ -161,7 +161,7 @@ function EditLancamentoModal({
 function RelatoriosTab() {
   const { ordens, clientes, veiculos } = useStore();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
 
   const [dataInicio,   setDataInicio]   = useState(firstOfMonth);
@@ -404,7 +404,7 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
   const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada');
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
-  const [dataLanc, setDataLanc] = useState(new Date().toISOString().split('T')[0]);
+  const [dataLanc, setDataLanc] = useState(localDateStr());
   const [editingLanc, setEditingLanc] = useState<Lancamento | null>(null);
 
   // Contas a pagar state
@@ -414,7 +414,7 @@ function FinanceiroContent({ onLogout }: { onLogout: () => void }) {
   const [cVencimento, setCVencimento] = useState('');
   const [cFornecedor, setCFornecedor] = useState('');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const currentMonth = today.slice(0, 7);
 
   const stats = useMemo(() => {

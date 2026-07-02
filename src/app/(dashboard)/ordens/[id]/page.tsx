@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel, buildWhatsAppLink, cn, generateId } from '@/lib/utils';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, buildWhatsAppLink, cn, generateId, localDateStr } from '@/lib/utils';
 import {
   ArrowLeft, Printer, MessageSquare, CheckCircle,
   Car, User, Gauge, Wrench, Package, Pencil,
@@ -86,7 +86,7 @@ export default function OrdemDetailPage() {
     await updateOrdem(id, {
       status: 'entregue',
       pagamento,
-      dataConclusao: new Date().toISOString(),
+      dataConclusao: localDateStr(), // data LOCAL (não UTC) — evita bug de +1 dia após 21h BRT
       valorTotal: totalFormas,  // discounted total goes to financeiro
       ...(descObs ? { observacoesInternas: (ordem?.observacoesInternas ? ordem.observacoesInternas + '\n' : '') + descObs } : {}),
     });
